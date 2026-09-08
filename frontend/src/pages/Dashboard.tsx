@@ -5,31 +5,40 @@ import {
 } from 'recharts';
 import KpiCard from '../components/KpiCard';
 import GlassCard from '../components/GlassCard';
-import { fetchCurrentData, fetchPrediction, fetchHistoricalData, fetchEnergyBreakdown } from '../services/api';
-import { Activity, Lightbulb, BrainCircuit, AlertTriangle, Zap } from 'lucide-react';
+import {
+  fetchCurrentData, fetchPrediction, fetchHistoricalData,
+  fetchEnergyBreakdown, fetchLoads, toggleLoad, shedSuggestedLoads
+} from '../services/api';
+import { Activity, Lightbulb, BrainCircuit, AlertTriangle, Zap, Power, CheckCircle, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const PIE_COLORS = ['#6366f1', '#22d3ee', '#a78bfa', '#f59e0b', '#10b981', '#f43f5e'];
 
 const Dashboard = () => {
-  const [current, setCurrent]     = useState<any>({});
-  const [prediction, setPrediction] = useState<any>({});
-  const [history, setHistory]     = useState<any[]>([]);
-  const [breakdown, setBreakdown] = useState<any[]>([]);
+  const [current, setCurrent]           = useState<any>({});
+  const [prediction, setPrediction]     = useState<any>({});
+  const [history, setHistory]           = useState<any[]>([]);
+  const [breakdown, setBreakdown]       = useState<any[]>([]);
+  const [loadsData, setLoadsData]       = useState<any>(null);
+  const [togglingId, setTogglingId]     = useState<string | null>(null);
+  const [shedding, setShedding]         = useState(false);
+  const [shedMsg, setShedMsg]           = useState<string | null>(null);
   const navigate = useNavigate();
 
   const load = async () => {
     try {
-      const [cur, pred, hist, brk] = await Promise.all([
+      const [cur, pred, hist, brk, lds] = await Promise.all([
         fetchCurrentData(),
         fetchPrediction(),
         fetchHistoricalData(1),
         fetchEnergyBreakdown(),
+        fetchLoads().catch(() => null),
       ]);
       setCurrent(cur);
       setPrediction(pred);
       setHistory(hist);
       setBreakdown(brk);
+      if (lds) setLoadsData(lds);
     } catch (e) { /* backend may not be running yet */ }
   };
 
@@ -56,8 +65,138 @@ const Dashboard = () => {
                       : riskStatus === 'warning' ? 'warning'
                       : 'success';
 
+  // Toggle individual suggested non-critical load
+  const handleToggleLoad = async (id: string) => {
+    setTogglingId(id);
+    try {
+      await toggleLoad(id);
+      const updated = await fetchLoads();
+      setLoadsData(updated);
+    } catch {} finally {
+      setTogglingId(null);
+    }
+  };
+
+  // Shed all suggested non-critical loads
+  const handleShedSuggested = async () => {
+    setShedding(true);
+    try {
+      const res = await shedSuggestedLoads();
+      setShedMsg(`Turned off ${res.shed_ids?.length || 0} non-critical loads to shave ${res.saved_kw || 0} kW!`);
+      const updated = await fetchLoads();
+      setLoadsData(updated);
+      setTimeout(() => setShedMsg(null), 6000);
+    } catch {} finally {
+      setShedding(false);
+    }
+  };
+
+  // Compute top non-critical loads currently ON for AI shed recommendation
+  const nonCriticalOn: any[] = (loadsData?.non_critical || []).filter((l: any) => l.status === 'ON');
+  nonCriticalOn.sort((a, b) => b.power_kw - a.power_kw);
+  const suggestedLoads = nonCriticalOn.slice(0, 4);
+  const suggestedSavings = suggestedLoads.reduce((sum, l) => sum + l.power_kw, 0);
+  const isPeakAlert = risk === 'HIGH' || risk === 'CRITICAL' || prob >= 60 || (current.power || 0) >= 60;
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6" style={{ width: '100%', maxWidth: '100%' }}>
+
+      {/* ── PEAK LOAD AI BALANCING BANNER & QUICK ACTIONS ──────── */}
+      {isPeakAlert && (
+        <GlassCard elevation="accent" style={{
+          background: 'linear-gradient(135deg, rgba(244,63,94,0.12) 0%, rgba(245,158,11,0.08) 100%)',
+          borderColor: 'rgba(244,63,94,0.35)',
+          padding: '16px 18px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: 10,
+                background: 'rgba(244,63,94,0.2)', border: '1px solid rgba(244,63,94,0.4)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--danger)', flexShrink: 0
+              }}>
+                <AlertTriangle size={20} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span>⚠️ Peak Grid Alert &mdash; Risk Level: {risk} ({prob.toFixed(0)}%)</span>
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
+                  AI predicts high demand risk. Turn off recommended non-critical loads below to balance the grid:
+                </p>
+              </div>
+            </div>
+
+            <button
+              id="dash-btn-shed-suggested"
+              onClick={handleShedSuggested}
+              disabled={shedding || suggestedLoads.length === 0}
+              className="btn-danger-pulse"
+              style={{
+                padding: '9px 16px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                background: 'linear-gradient(135deg, #f43f5e, #e11d48)',
+                color: 'white', fontWeight: 700, fontSize: 12,
+                display: 'flex', alignItems: 'center', gap: 7,
+                opacity: shedding ? 0.6 : 1,
+              }}
+            >
+              <Zap size={14} />
+              {shedding ? 'Shedding…' : `Turn Off All Suggested (-${suggestedSavings.toFixed(1)} kW)`}
+            </button>
+          </div>
+
+          {/* Suggested Loads Grid with individual Turn Off buttons */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
+            {suggestedLoads.map((load: any) => (
+              <div
+                key={load.id}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                  padding: '10px 12px', borderRadius: 10,
+                  background: 'rgba(0, 0, 0, 0.35)', border: '1px solid rgba(255,255,255,0.08)',
+                }}
+              >
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={load.name}>
+                    {load.name}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)', display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <span>{load.zone}</span>
+                    <span>&middot;</span>
+                    <span style={{ color: 'var(--warning)', fontWeight: 700 }}>{load.power_kw} kW</span>
+                  </div>
+                </div>
+
+                <button
+                  id={`dash-toggle-${load.id}`}
+                  onClick={() => handleToggleLoad(load.id)}
+                  disabled={togglingId === load.id}
+                  style={{
+                    padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(244,63,94,0.3)',
+                    background: 'rgba(244,63,94,0.15)', color: 'var(--danger)',
+                    cursor: 'pointer', fontWeight: 700, fontSize: 11.5,
+                    display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0,
+                  }}
+                >
+                  {togglingId === load.id ? (
+                    <RefreshCw size={11} style={{ animation: 'spin 0.8s linear infinite' }} />
+                  ) : (
+                    <Power size={11} />
+                  )}
+                  Turn Off
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {shedMsg && (
+            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--success)', fontWeight: 600 }}>
+              <CheckCircle size={15} />
+              {shedMsg}
+            </div>
+          )}
+        </GlassCard>
+      )}
 
       {/* ── KPI ROW ─────────────────────────────────────────── */}
       <div className="grid-6">

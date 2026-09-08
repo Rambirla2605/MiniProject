@@ -249,33 +249,96 @@ const LoadManagement = () => {
         </div>
       </div>
 
-      {/* ── PEAK LOAD ALERT BANNER ─────────────────────────────── */}
+      {/* ── PEAK LOAD ALERT & AI RECOMMENDATIONS ──────────────── */}
       {isPeakAlert && (
-        <div className="peak-alert-banner">
-          <AlertTriangle size={24} style={{ color: 'var(--danger)', flexShrink: 0 }} />
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--danger)' }}>
-              Peak Load Alert &mdash; Risk Level: {risk} ({prob.toFixed(0)}% Probability)
+        <div className="peak-alert-banner" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
+              <AlertTriangle size={24} style={{ color: 'var(--danger)', flexShrink: 0 }} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--danger)' }}>
+                  Peak Load Alert &mdash; Risk Level: {risk} ({prob.toFixed(0)}% Probability)
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
+                  Grid approaching transformer threshold. Turn off recommended non-critical loads below to safely balance demand.
+                  Potential relief: <strong style={{ color: 'var(--warning)' }}>{loadsData?.shed_available_kw ?? 0} kW</strong> available to shed.
+                </div>
+              </div>
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
-              Predicted peak load poses risk to A-Block substation transformers. Shed non-critical classrooms and labs below to prevent breaker tripping.
-              Save up to <strong style={{ color: 'var(--warning)' }}>{loadsData?.shed_available_kw ?? 0} kW</strong>.
-            </div>
+
+            <button
+              id="btn-one-click-balance"
+              className="btn-danger-pulse"
+              onClick={handleShedSuggested}
+              disabled={actionLoading !== null || aiSuggested.length === 0}
+              style={{
+                padding: '10px 18px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                background: 'linear-gradient(135deg,#f43f5e,#e11d48)',
+                color: 'white', fontWeight: 700, fontSize: 12.5,
+                display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0,
+              }}
+            >
+              <BrainCircuit size={15} />
+              {actionLoading === 'suggested' ? 'Balancing…' : `Turn Off All Suggested (${aiSuggested.length} Loads)`}
+            </button>
           </div>
-          <button
-            className="btn-danger-pulse"
-            onClick={handleShedSuggested}
-            disabled={actionLoading !== null}
-            style={{
-              padding: '10px 18px', borderRadius: 10, border: 'none', cursor: 'pointer',
-              background: 'linear-gradient(135deg,#f43f5e,#e11d48)',
-              color: 'white', fontWeight: 700, fontSize: 12.5,
-              display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0,
-            }}
-          >
-            <BrainCircuit size={15} />
-            {actionLoading === 'suggested' ? 'Balancing…' : 'One-Click AI Balance'}
-          </button>
+
+          {/* AI Recommended Non-Critical Loads to Turn Off */}
+          {aiSuggested.length > 0 && (
+            <div style={{
+              background: 'rgba(0, 0, 0, 0.3)',
+              borderRadius: 12,
+              padding: '12px 14px',
+              border: '1px solid rgba(245,158,11,0.25)',
+              width: '100%',
+              boxSizing: 'border-box'
+            }}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--warning)', letterSpacing: '0.4px', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Zap size={13} />
+                Recommended Non-Critical Loads to Turn Off (Highest Consumers):
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 8 }}>
+                {(loadsData?.non_critical ?? [])
+                  .filter(l => aiSuggested.includes(l.id) && l.status === 'ON')
+                  .map(load => (
+                    <div
+                      key={load.id}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                        padding: '8px 12px', borderRadius: 8,
+                        background: 'rgba(255, 255, 255, 0.03)',
+                        border: '1px solid rgba(245, 158, 11, 0.3)',
+                      }}
+                    >
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={load.name}>
+                          {load.name}
+                        </div>
+                        <div style={{ fontSize: 10.5, color: 'var(--text-3)' }}>
+                          {load.zone} &middot; <strong style={{ color: 'var(--warning)' }}>{load.power_kw} kW</strong>
+                        </div>
+                      </div>
+
+                      <button
+                        id={`suggested-toggle-${load.id}`}
+                        onClick={() => handleToggle(load.id)}
+                        disabled={toggling === load.id}
+                        className="toggle-btn toggle-btn-on"
+                        style={{ padding: '5px 10px', fontSize: 11, flexShrink: 0 }}
+                      >
+                        {toggling === load.id ? (
+                          <RefreshCw size={11} style={{ animation: 'spin 0.8s linear infinite' }} />
+                        ) : (
+                          <Power size={11} />
+                        )}
+                        Turn Off
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -287,7 +350,7 @@ const LoadManagement = () => {
           { label: 'Total Shed Savings', value: `${savedKw.toFixed(1)} kW`, sub: `${loadsData?.non_critical.filter(l => l.status === 'OFF').length ?? 0} loads safely isolated`, color: 'var(--success)', icon: <CheckCircle size={16} /> },
           { label: 'Max Shed Capacity', value: `${(loadsData?.shed_available_kw ?? 0).toFixed(1)} kW`, sub: 'Available headroom to shed', color: 'var(--info)', icon: <ShieldOff size={16} /> },
         ].map(({ label, value, sub, color, icon }) => (
-          <GlassCard key={label} style={{ flex: 1, minWidth: 200 }}>
+          <GlassCard key={label} style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <span style={{ color }}>{icon}</span>
               <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>{label}</span>
@@ -300,7 +363,7 @@ const LoadManagement = () => {
 
       {/* ── FILTER & SEARCH BAR ──────────────────────────────────── */}
       <div className="lm-filter-bar">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, minWidth: 280 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, minWidth: 0, width: '100%' }}>
           <div className="floor-tabs">
             {[
               { id: 'ALL', label: 'All Zones (A-Block)' },
