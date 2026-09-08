@@ -179,7 +179,7 @@ const LoadManagement = () => {
               Dr. N.G.P. Institute of Technology
             </span>
             <span className="badge badge-info" style={{ fontSize: 11, padding: '3px 8px' }}>
-              A-Block &middot; 3 Floors &middot; 12 Classrooms &middot; 9 Labs &middot; Admin Offices
+              A-Block &middot; 3 Floors &middot; 12 Classrooms &middot; 13 Labs &middot; East &amp; West Seminar Halls
             </span>
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-1)', letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -187,7 +187,7 @@ const LoadManagement = () => {
             Smart Load Management &amp; Peak Shedding
           </h1>
           <p style={{ fontSize: 12.5, color: 'var(--text-2)', marginTop: 2 }}>
-            Real-time isolation of Critical infrastructure (Admission, Principal, CoE, Server Room) vs Non-Critical classrooms (A-101 to A-304) and specialized department labs.
+            Real-time isolation of Critical infrastructure (Admission, Principal, CoE, Server Room) vs Non-Critical classrooms (A-101 to A-304), department labs (DSP, VLSI, Communication, Machines, Programming), and East/West Seminar Halls.
           </p>
         </div>
 
@@ -303,11 +303,11 @@ const LoadManagement = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, minWidth: 280 }}>
           <div className="floor-tabs">
             {[
-              { id: 'ALL', label: 'All Zones (38 Loads)' },
-              { id: '1', label: 'Floor 1 (Classrooms A101-104, Labs & Admin)' },
-              { id: '2', label: 'Floor 2 (Classrooms A201-204, TI Lab & EEE)' },
-              { id: '3', label: 'Floor 3 (Classrooms A301-304, CAD & Bio)' },
-              { id: 'COMMON', label: 'East Seminar & Core Facilities' },
+              { id: 'ALL', label: 'All Zones (A-Block)' },
+              { id: '1', label: 'Floor 1 (Classrooms A101-104, DSP, Comm & Machines)' },
+              { id: '2', label: 'Floor 2 (Classrooms A201-204, VLSI, TI & Prog)' },
+              { id: '3', label: 'Floor 3 (Classrooms A301-304, Bio & MATLAB)' },
+              { id: 'COMMON', label: 'East & West Seminar Halls & Campus Core' },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -325,9 +325,9 @@ const LoadManagement = () => {
             {[
               { id: 'ALL', label: 'All Categories' },
               { id: 'Classroom', label: '📚 12 Classrooms' },
-              { id: 'Laboratory', label: '🔬 9 Specialized Labs' },
+              { id: 'Laboratory', label: '🔬 13 Specialized Labs' },
               { id: 'Office', label: '🏛️ Admin & Faculty' },
-              { id: 'Other', label: '⚡ Common & Facilities' },
+              { id: 'Other', label: '🎭 Seminar Halls & Facilities' },
             ].map(t => (
               <button
                 key={t.id}
@@ -492,6 +492,16 @@ const LoadManagement = () => {
                             {load.floor ? (
                               <span style={{ fontSize: 10, color: 'var(--text-3)' }}>[Floor {load.floor}]</span>
                             ) : null}
+                            {load.id === 'LD-F0-SEME' && (
+                              <span style={{ color: '#ec4899', fontWeight: 700, background: 'rgba(236,72,153,0.15)', padding: '1px 6px', borderRadius: 4, fontSize: 10 }}>
+                                ★ EAST AUDITORIUM
+                              </span>
+                            )}
+                            {load.id === 'LD-F0-SEMW' && (
+                              <span style={{ color: '#ec4899', fontWeight: 700, background: 'rgba(236,72,153,0.15)', padding: '1px 6px', borderRadius: 4, fontSize: 10 }}>
+                                ★ WEST AUDITORIUM
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
