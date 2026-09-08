@@ -48,7 +48,7 @@ const LiveMonitoring = () => {
       </div>
 
       {/* Main Params Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+      <div className="live-params-grid">
         {params.map(({ label, value, unit, color, icon }) => (
           <GlassCard key={label} className="flex flex-col gap-14" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -80,7 +80,7 @@ const LiveMonitoring = () => {
       </div>
 
       {/* Environmental Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+      <div className="live-env-grid">
         <GlassCard style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ width: 48, height: 48, borderRadius: 14, background: 'var(--warning-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--warning)', flexShrink: 0 }}>
             <Thermometer size={22} />

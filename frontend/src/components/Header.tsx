@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, Menu } from 'lucide-react';
 
-const Header = () => {
+interface HeaderProps {
+  onToggleSidebar?: () => void;
+}
+
+const Header = ({ onToggleSidebar }: HeaderProps) => {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -11,9 +15,19 @@ const Header = () => {
 
   return (
     <header className="app-header">
-      <div className="header-title">
-        <h2>A BLOCK — SMART ENERGY MONITORING</h2>
-        <p>College of Engineering &nbsp;·&nbsp; Prototype Dataset &nbsp;·&nbsp; IoT + AI Platform</p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button
+          className="mobile-menu-btn"
+          onClick={onToggleSidebar}
+          aria-label="Toggle Navigation Menu"
+        >
+          <Menu size={20} />
+        </button>
+
+        <div className="header-title">
+          <h2>DR. N.G.P. INSTITUTE OF TECHNOLOGY — A BLOCK</h2>
+          <p>Smart Energy Digital Twin &nbsp;·&nbsp; 3 Floors &amp; 20+ Rooms &nbsp;·&nbsp; AI Load Balancing</p>
+        </div>
       </div>
 
       <div className="header-actions">
@@ -24,7 +38,7 @@ const Header = () => {
           </div>
           <div className="status-pill demo">
             <span className="status-dot" />
-            DEMO DATA
+            LIVE TWIN
           </div>
         </div>
 
@@ -36,11 +50,11 @@ const Header = () => {
         </div>
 
         <div className="flex items-center gap-2" style={{ gap: 8, display: 'flex', alignItems: 'center' }}>
-          <button className="icon-btn">
+          <button className="icon-btn" aria-label="Notifications">
             <Bell size={16} />
             <span className="notif-dot" />
           </button>
-          <div className="avatar" title="Project Profile">SA</div>
+          <div className="avatar" title="Dr. NGP iTech Energy Admin">NGP</div>
         </div>
       </div>
     </header>

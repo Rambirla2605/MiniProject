@@ -7,6 +7,7 @@ import KpiCard from '../components/KpiCard';
 import GlassCard from '../components/GlassCard';
 import { fetchCurrentData, fetchPrediction, fetchHistoricalData, fetchEnergyBreakdown } from '../services/api';
 import { Activity, Lightbulb, BrainCircuit, AlertTriangle, Zap } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const PIE_COLORS = ['#6366f1', '#22d3ee', '#a78bfa', '#f59e0b', '#10b981', '#f43f5e'];
 
@@ -15,6 +16,7 @@ const Dashboard = () => {
   const [prediction, setPrediction] = useState<any>({});
   const [history, setHistory]     = useState<any[]>([]);
   const [breakdown, setBreakdown] = useState<any[]>([]);
+  const navigate = useNavigate();
 
   const load = async () => {
     try {
@@ -109,7 +111,7 @@ const Dashboard = () => {
       </div>
 
       {/* ── MAIN CHART + OVERLOAD CARD ──────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16 }}>
+      <div className="dash-main-grid">
 
         {/* Power Consumption Chart */}
         <GlassCard elevation="accent" className="flex flex-col" style={{ minHeight: 360 }}>
@@ -246,7 +248,7 @@ const Dashboard = () => {
       </div>
 
       {/* ── BOTTOM ROW ──────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+      <div className="dash-bottom-grid">
 
         {/* Energy Breakdown Pie */}
         <GlassCard className="flex flex-col" style={{ minHeight: 280 }}>
@@ -315,11 +317,11 @@ const Dashboard = () => {
               <div className="section-subtitle">Generated from live data</div>
             </div>
           </div>
-          <div className="insight-card warning">
+          <div className="insight-card warning" style={{ cursor: 'pointer' }} onClick={() => navigate('/loads')}>
             <AlertTriangle size={16} style={{ color: 'var(--warning)', flexShrink: 0, marginTop: 1 }} />
             <div>
               <h4 style={{ color: 'var(--warning)' }}>Peak Load Management</h4>
-              <p>Predicted demand is approaching the safe limit. Consider shifting non-critical loads away from 14:00–16:00.</p>
+              <p>Predicted demand is approaching the safe limit. Consider shifting non-critical loads away from 14:00–16:00. Click to manage.</p>
             </div>
           </div>
           <div className="insight-card info">

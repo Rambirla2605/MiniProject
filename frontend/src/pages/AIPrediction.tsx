@@ -50,7 +50,7 @@ const AIPrediction = () => {
       </div>
 
       {/* KPI row */}
-      <div className="grid-6" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+      <div className="pred-metrics-grid">
         <KpiCard title="Current Load"        value={(prediction.current_load   || 0).toFixed(1)} unit="kW" subtitle="Real-time" />
         <KpiCard title="Predicted Load"      value={(prediction.predicted_load || 0).toFixed(1)} unit="kW" status="accent" subtitle="Next 60 min" />
         <KpiCard title="Safe Limit"          value={prediction.safe_limit || 75} unit="kW" subtitle="Configurable" />
@@ -58,7 +58,7 @@ const AIPrediction = () => {
       </div>
 
       {/* Model Metrics + Features */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="pred-details-grid">
 
         {/* Model Performance */}
         <GlassCard elevation="accent" className="flex flex-col gap-5">

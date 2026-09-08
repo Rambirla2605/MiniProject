@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import LiveMonitoring from './pages/LiveMonitoring';
 import Analytics from './pages/Analytics';
 import AIPrediction from './pages/AIPrediction';
+import LoadManagement from './pages/LoadManagement';
 import GlassCard from './components/GlassCard';
 
 /* ─── Tiny page shell ──────────────────────────────────────── */
@@ -164,18 +165,21 @@ const SettingsPage = () => {
 
 /* ─── App ──────────────────────────────────────────────────── */
 function App() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <Router>
       <div className="app-container">
-        <Sidebar />
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <main className="main-content">
-          <Header />
+          <Header onToggleSidebar={() => setSidebarOpen(prev => !prev)} />
           <Routes>
             <Route path="/"          element={<Dashboard />} />
             <Route path="/live"      element={<LiveMonitoring />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/prediction"element={<AIPrediction />} />
-            <Route path="/overload"  element={<Navigate to="/" replace />} />
+            <Route path="/loads"     element={<LoadManagement />} />
+            <Route path="/overload"  element={<Navigate to="/loads" replace />} />
             <Route path="/sensors"   element={<SensorsPage />} />
             <Route path="/history"   element={<Navigate to="/analytics" replace />} />
             <Route path="/alerts"    element={<AlertsPage />} />

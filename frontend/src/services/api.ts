@@ -21,3 +21,29 @@ export const fetchEnergyBreakdown = async () => {
   const response = await axios.get(`${API_URL}/energy-breakdown`);
   return response.data;
 };
+
+export const fetchLoads = async () => {
+  const response = await axios.get(`${API_URL}/loads`);
+  return response.data;
+};
+
+export const toggleLoad = async (loadId: string) => {
+  const response = await axios.post(`${API_URL}/loads/${loadId}/toggle`);
+  return response.data;
+};
+
+export const shedSuggestedLoads = async () => {
+  const response = await axios.post(`${API_URL}/loads/shed-suggested`);
+  return response.data;
+};
+
+export const shedAllLoads = async () => {
+  const response = await axios.post(`${API_URL}/loads/shed-all`);
+  return response.data;
+};
+
+export const restoreAllLoads = async () => {
+  const response = await axios.post(`${API_URL}/loads/restore-all`);
+  return response.data;
+};
+

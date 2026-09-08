@@ -93,7 +93,7 @@ const Analytics = () => {
       </GlassCard>
 
       {/* Yearly Comparison + Consumers */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="analytics-grid">
 
         {/* Yearly Bar Chart */}
         <GlassCard style={{ minHeight: 300 }}>
@@ -122,7 +122,7 @@ const Analytics = () => {
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--glass-border)' }}>
+          <div className="analytics-kpi-row">
             {YEARLY.map(({ year, peak, avg }) => (
               <div key={year} style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 2 }}>{year}</div>
