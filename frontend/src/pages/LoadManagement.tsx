@@ -1,49 +1,69 @@
 import { useEffect, useState, useCallback } from 'react';
-import { fetchLoads, fetchPrediction } from '../services/api';
+import {
+  fetchLoads, fetchPrediction, toggleLoad,
+  shedSuggestedLoads, shedAllLoads, restoreAllLoads
+} from '../services/api';
 import GlassCard from '../components/GlassCard';
 import {
-  ShieldCheck, ShieldOff, Zap, AlertTriangle,
-  BrainCircuit, Lock, Info
+  ShieldCheck, ShieldOff, Zap, AlertTriangle, CheckCircle,
+  Power, BrainCircuit, RefreshCw, Lock, RotateCcw,
+  Search, Building2, Flame
 } from 'lucide-react';
 
-// ── Prototype / Demonstration Loads ────────────────────────────────────────
-// These are representative load categories for demonstration purposes.
-// They do NOT correspond to physical load-control relays in the current prototype.
-const PROTOTYPE_LOADS = {
-  critical: [
-    { id: 'LD-MAIN',   name: 'Main Electrical Supply Panel',  type: 'Essential',   power_kw: 12.0, status: 'ON' as const, desc: 'Primary power feed — always protected' },
-    { id: 'LD-SAFE',   name: 'Safety & Emergency Systems',    type: 'Safety',      power_kw: 4.0,  status: 'ON' as const, desc: 'Emergency lighting, fire alarm, exit signs' },
-  ],
-  non_critical: [
-    { id: 'LD-LIGHT',  name: 'Lighting (Classrooms & Corridors)', type: 'Lighting',    power_kw: 8.5, status: 'ON' as const, desc: 'General lighting across monitored area' },
-    { id: 'LD-FANS',   name: 'Fans & Ventilation',                type: 'HVAC',        power_kw: 6.2, status: 'ON' as const, desc: 'Ceiling fans and ventilation units' },
-    { id: 'LD-LAB',    name: 'Laboratory Equipment',              type: 'Laboratory',  power_kw: 10.5,status: 'ON' as const, desc: 'Workstations, instruments, test equipment' },
-    { id: 'LD-OFFICE', name: 'Office Equipment & Computers',      type: 'Office',      power_kw: 4.8, status: 'ON' as const, desc: 'PCs, projectors, printers' },
-  ],
-};
+interface Load {
+  id: string;
+  name: string;
+  zone: string;
+  type: string;
+  floor?: number;
+  power_kw: number;
+  critical: boolean;
+  status: 'ON' | 'OFF';
+}
 
-const TYPE_DOT: Record<string, string> = {
-  Essential: '#10b981', Safety: '#10b981',
-  Lighting: '#fbbf24', HVAC: '#06b6d4',
-  Laboratory: '#22d3ee', Office: '#f59e0b',
+interface LoadsData {
+  critical: Load[];
+  non_critical: Load[];
+  total_active_kw: number;
+  shed_available_kw: number;
+}
+
+const TYPE_COLORS: Record<string, string> = {
+  Laboratory: '#22d3ee',
+  Classroom: '#818cf8',
+  Office: '#f59e0b',
+  Lighting: '#fbbf24',
+  HVAC: '#06b6d4',
+  Appliance: '#c084fc',
+  Safety: '#10b981',
+  Security: '#10b981',
+  IT: '#38bdf8',
+  Auditorium: '#ec4899',
+  Medical: '#f43f5e',
+  Other: '#94a3b8',
 };
 
 const LoadManagement = () => {
+  const [loadsData, setLoadsData] = useState<LoadsData | null>(null);
   const [prediction, setPrediction] = useState<any>({});
-  // Mirror prototype load state locally (not connected to physical relays)
-  const localState: Record<string, 'ON' | 'OFF'> = (() => {
-    const s: Record<string, 'ON' | 'OFF'> = {};
-    [...PROTOTYPE_LOADS.critical, ...PROTOTYPE_LOADS.non_critical].forEach(l => { s[l.id] = l.status; });
-    return s;
-  })();
-  const [liveData, setLiveData] = useState<any>(null);
+  const [toggling, setToggling] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [savedKw, setSavedKw] = useState(0);
+  const [lastShed, setLastShed] = useState<string[]>([]);
+  const [selectedFloor, setSelectedFloor] = useState<string>('ALL');
+  const [selectedType, setSelectedType] = useState<string>('ALL');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   const loadAll = useCallback(async () => {
     try {
-      const [pred, live] = await Promise.all([fetchPrediction(), fetchLoads().catch(() => null)]);
+      const [ld, pred] = await Promise.all([fetchLoads(), fetchPrediction()]);
+      setLoadsData(ld);
       setPrediction(pred);
-      if (live) setLiveData(live);
-    } catch { /* backend cold start */ }
+      const offPower = (ld.non_critical as Load[])
+        .filter((l: Load) => l.status === 'OFF')
+        .reduce((sum: number, l: Load) => sum + l.power_kw, 0);
+      setSavedKw(Math.round(offPower * 10) / 10);
+    } catch { /* backend cold start or retry */ }
   }, []);
 
   useEffect(() => {
@@ -52,35 +72,100 @@ const LoadManagement = () => {
     return () => clearInterval(iv);
   }, [loadAll]);
 
-  const risk    = prediction.risk_level || 'LOW';
-  const prob    = prediction.probability || 0;
+  const handleToggle = async (id: string) => {
+    setToggling(id);
+    try {
+      await toggleLoad(id);
+      await loadAll();
+    } finally {
+      setToggling(null);
+    }
+  };
+
+  const handleShedSuggested = async () => {
+    setActionLoading('suggested');
+    try {
+      const result = await shedSuggestedLoads();
+      setLastShed(result.shed_ids || []);
+      await loadAll();
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleShedAll = async () => {
+    setActionLoading('all');
+    try {
+      const result = await shedAllLoads();
+      setLastShed(result.shed_ids || []);
+      await loadAll();
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRestoreAll = async () => {
+    setActionLoading('restore');
+    try {
+      await restoreAllLoads();
+      setLastShed([]);
+      await loadAll();
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const risk = prediction.risk_level || 'LOW';
+  const prob = prediction.probability || 0;
   const isPeakAlert = risk === 'HIGH' || risk === 'CRITICAL' || prob >= 70;
 
-  const totalActive = Object.entries(localState)
-    .filter(([, s]) => s === 'ON')
-    .reduce((sum, [id]) => {
-      const all = [...PROTOTYPE_LOADS.critical, ...PROTOTYPE_LOADS.non_critical];
-      const load = all.find(l => l.id === id);
-      return sum + (load?.power_kw ?? 0);
-    }, 0);
+  const criticalPower = loadsData?.critical
+    .filter(l => l.status === 'ON')
+    .reduce((s, l) => s + l.power_kw, 0) ?? 0;
+  const nonCriticalOnPower = loadsData?.non_critical
+    .filter(l => l.status === 'ON')
+    .reduce((s, l) => s + l.power_kw, 0) ?? 0;
 
-  const criticalPower = PROTOTYPE_LOADS.critical
-    .filter(l => localState[l.id] === 'ON')
-    .reduce((s, l) => s + l.power_kw, 0);
-
-  const nonCriticalPower = PROTOTYPE_LOADS.non_critical
-    .filter(l => localState[l.id] === 'ON')
-    .reduce((s, l) => s + l.power_kw, 0);
-
-  // AI suggested: non-critical loads that are ON (just flags for display)
-  const suggestedForOptimization = PROTOTYPE_LOADS.non_critical
-    .filter(l => localState[l.id] === 'ON')
+  // AI suggested: top non-critical ON loads by power, targeting up to 25 kW reduction
+  const aiSuggested: string[] = [];
+  let suggestAcc = 0;
+  [...(loadsData?.non_critical ?? [])]
+    .filter(l => l.status === 'ON')
     .sort((a, b) => b.power_kw - a.power_kw)
-    .slice(0, 2)
-    .map(l => l.id);
+    .forEach(l => {
+      if (suggestAcc < 25) {
+        aiSuggested.push(l.id);
+        suggestAcc += l.power_kw;
+      }
+    });
 
-  // Use live backend totals if available, otherwise use prototype totals
-  const displayTotal = liveData?.total_active_kw ?? totalActive;
+  // Filter helper for search, floor tabs, and category pills
+  const matchesFilter = (load: Load) => {
+    // Floor check
+    if (selectedFloor === '1' && load.floor !== 1) return false;
+    if (selectedFloor === '2' && load.floor !== 2) return false;
+    if (selectedFloor === '3' && load.floor !== 3) return false;
+    if (selectedFloor === '0' && load.floor !== 0) return false;
+
+    // Category / Type check
+    if (selectedType === 'Classroom' && load.type !== 'Classroom') return false;
+    if (selectedType === 'Laboratory' && load.type !== 'Laboratory') return false;
+    if (selectedType === 'Office' && load.type !== 'Office') return false;
+    if (selectedType === 'Other' && ['Classroom', 'Laboratory', 'Office'].includes(load.type)) return false;
+
+    // Search query check
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      load.name.toLowerCase().includes(q) ||
+      load.zone.toLowerCase().includes(q) ||
+      load.type.toLowerCase().includes(q) ||
+      load.id.toLowerCase().includes(q)
+    );
+  };
+
+  const filteredCritical = (loadsData?.critical ?? []).filter(matchesFilter);
+  const filteredNonCritical = (loadsData?.non_critical ?? []).filter(matchesFilter);
 
   return (
     <div className="flex flex-col gap-6 lm-page">
@@ -88,73 +173,168 @@ const LoadManagement = () => {
       {/* Page Header */}
       <div className="lm-header-bar">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginBottom: 4, flexWrap: 'wrap' }}>
-            <span className="badge badge-warning" style={{ fontSize: 11, padding: '3px 8px' }}>
-              Prototype / Demonstration Loads
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginBottom: 4 }}>
+            <span className="badge badge-accent" style={{ fontSize: 11, padding: '3px 8px' }}>
+              <Building2 size={12} style={{ display: 'inline', marginRight: 4 }} />
+              Dr. N.G.P. Institute of Technology
             </span>
             <span className="badge badge-info" style={{ fontSize: 11, padding: '3px 8px' }}>
-              Monitoring + Optimization Support
+              A-Block · Ground Floor: Admin + Seminar Halls · F1: ME Labs · F2: EEE · F3: ECE
             </span>
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-1)', letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ color: '#f59e0b' }}><Zap size={24} /></span>
-            Load Management & Optimization
+            <span style={{ color: '#f59e0b' }}><Power size={24} /></span>
+            Smart Load Management &amp; Peak Shedding
           </h1>
           <p style={{ fontSize: 12.5, color: 'var(--text-2)', marginTop: 2 }}>
-            Representative load categories for the AI-driven Digital Twin prototype.
-            The system monitors energy consumption and provides AI-based optimization recommendations.
+            Ground Floor: Admin Offices, East &amp; West Seminar Halls · Floor 1: ME Classrooms + Programming Labs ·
+            Floor 2: EEE Dept (Electrical Machines, Power Electronics, LabVIEW) · Floor 3: ECE Dept (DSP, VLSI, Communication, Biomedical Labs)
           </p>
+        </div>
+
+        {/* Global Control Buttons */}
+        <div className="lm-action-buttons">
+          <button
+            id="btn-ai-shed"
+            className="btn-danger-pulse"
+            onClick={handleShedSuggested}
+            disabled={actionLoading !== null}
+            style={{
+              padding: '9px 16px', borderRadius: 10, border: 'none', cursor: 'pointer',
+              background: 'linear-gradient(135deg, #f43f5e, #e11d48)',
+              color: 'white', fontWeight: 700, fontSize: 12,
+              display: 'flex', alignItems: 'center', gap: 6,
+              opacity: actionLoading ? 0.6 : 1,
+              boxShadow: '0 0 16px rgba(244,63,94,0.3)',
+            }}
+          >
+            <BrainCircuit size={14} />
+            {actionLoading === 'suggested' ? 'Shedding…' : 'AI Shed Suggested'}
+          </button>
+
+          <button
+            id="btn-shed-all"
+            onClick={handleShedAll}
+            disabled={actionLoading !== null}
+            style={{
+              padding: '9px 14px', borderRadius: 10,
+              border: '1px solid rgba(245,158,11,0.4)',
+              background: 'var(--warning-dim)',
+              color: 'var(--warning)',
+              cursor: 'pointer', fontWeight: 700, fontSize: 12,
+              display: 'flex', alignItems: 'center', gap: 6,
+              opacity: actionLoading ? 0.6 : 1,
+            }}
+          >
+            <Flame size={14} />
+            {actionLoading === 'all' ? 'Shedding All…' : 'Shed All Non-Critical'}
+          </button>
+
+          <button
+            id="btn-restore-all"
+            onClick={handleRestoreAll}
+            disabled={actionLoading !== null}
+            style={{
+              padding: '9px 14px', borderRadius: 10,
+              border: '1px solid rgba(16,185,129,0.4)',
+              background: 'var(--success-dim)',
+              color: 'var(--success)',
+              cursor: 'pointer', fontWeight: 700, fontSize: 12,
+              display: 'flex', alignItems: 'center', gap: 6,
+              opacity: actionLoading ? 0.6 : 1,
+            }}
+          >
+            <RotateCcw size={14} />
+            {actionLoading === 'restore' ? 'Restoring…' : 'Restore All'}
+          </button>
         </div>
       </div>
 
-      {/* Prototype notice */}
-      <div style={{
-        display: 'flex', alignItems: 'flex-start', gap: 14, padding: '12px 16px',
-        borderRadius: 12, background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.18)',
-      }}>
-        <span style={{ color: 'var(--info)', flexShrink: 0, marginTop: 1 }}><Info size={16} /></span>
-        <p style={{ fontSize: 12, color: 'var(--text-2)', margin: 0, lineHeight: 1.6 }}>
-          <strong style={{ color: 'var(--info)' }}>Prototype Note:</strong> The loads shown below are representative categories
-          used to demonstrate the Digital Twin concept. The current prototype focuses on
-          <strong style={{ color: 'var(--text-1)' }}> monitoring, prediction, and optimization recommendations</strong> —
-          not physical automated load control. AI suggestions indicate which load categories could be
-          reduced during peak periods to stay within the safe energy threshold.
-        </p>
-      </div>
-
-      {/* ── PEAK ALERT ────────────────────────────────────────── */}
+      {/* ── PEAK LOAD ALERT & AI RECOMMENDATIONS ──────────────── */}
       {isPeakAlert && (
-        <div className="peak-alert-banner" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <AlertTriangle size={22} style={{ color: 'var(--danger)', flexShrink: 0 }} />
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--danger)' }}>
-                AI Peak Load Alert — Risk: {risk} ({prob.toFixed(0)}%)
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
-                AI predicts demand may approach the safe threshold. Consider reducing non-critical loads during this period.
+        <div className="peak-alert-banner" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
+              <AlertTriangle size={24} style={{ color: 'var(--danger)', flexShrink: 0 }} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--danger)' }}>
+                  Peak Load Alert &mdash; Risk Level: {risk} ({prob.toFixed(0)}% Probability)
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
+                  Grid approaching transformer threshold. Turn off recommended non-critical loads below to safely balance demand.
+                  Potential relief: <strong style={{ color: 'var(--warning)' }}>{loadsData?.shed_available_kw ?? 0} kW</strong> available to shed.
+                </div>
               </div>
             </div>
+
+            <button
+              id="btn-one-click-balance"
+              className="btn-danger-pulse"
+              onClick={handleShedSuggested}
+              disabled={actionLoading !== null || aiSuggested.length === 0}
+              style={{
+                padding: '10px 18px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                background: 'linear-gradient(135deg,#f43f5e,#e11d48)',
+                color: 'white', fontWeight: 700, fontSize: 12.5,
+                display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0,
+              }}
+            >
+              <BrainCircuit size={15} />
+              {actionLoading === 'suggested' ? 'Balancing…' : `Turn Off All Suggested (${aiSuggested.length} Loads)`}
+            </button>
           </div>
 
-          {suggestedForOptimization.length > 0 && (
-            <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(245,158,11,0.2)' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--warning)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <BrainCircuit size={13} />
-                AI Optimization Suggestion — Loads to Consider Reducing:
+          {/* AI Recommended Non-Critical Loads to Turn Off */}
+          {aiSuggested.length > 0 && (
+            <div style={{
+              background: 'rgba(0, 0, 0, 0.3)',
+              borderRadius: 12,
+              padding: '12px 14px',
+              border: '1px solid rgba(245,158,11,0.25)',
+              width: '100%',
+              boxSizing: 'border-box'
+            }}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--warning)', letterSpacing: '0.4px', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Zap size={13} />
+                Recommended Non-Critical Loads to Turn Off (Highest Consumers):
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {PROTOTYPE_LOADS.non_critical
-                  .filter(l => suggestedForOptimization.includes(l.id) && localState[l.id] === 'ON')
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 8 }}>
+                {(loadsData?.non_critical ?? [])
+                  .filter(l => aiSuggested.includes(l.id) && l.status === 'ON')
                   .map(load => (
-                    <div key={load.id} style={{
-                      display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 8,
-                      background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)',
-                    }}>
-                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: TYPE_DOT[load.type] ?? '#94a3b8' }} />
-                      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)' }}>{load.name}</span>
-                      <span style={{ fontSize: 11, color: 'var(--warning)', fontWeight: 700 }}>{load.power_kw} kW</span>
-                      <span className="badge badge-warning" style={{ fontSize: 10 }}>AI Suggestion</span>
+                    <div
+                      key={load.id}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                        padding: '8px 12px', borderRadius: 8,
+                        background: 'rgba(255, 255, 255, 0.03)',
+                        border: '1px solid rgba(245, 158, 11, 0.3)',
+                      }}
+                    >
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={load.name}>
+                          {load.name}
+                        </div>
+                        <div style={{ fontSize: 10.5, color: 'var(--text-3)' }}>
+                          {load.zone} &middot; <strong style={{ color: 'var(--warning)' }}>{load.power_kw} kW</strong>
+                        </div>
+                      </div>
+
+                      <button
+                        id={`suggested-toggle-${load.id}`}
+                        onClick={() => handleToggle(load.id)}
+                        disabled={toggling === load.id}
+                        className="toggle-btn toggle-btn-on"
+                        style={{ padding: '5px 10px', fontSize: 11, flexShrink: 0 }}
+                      >
+                        {toggling === load.id ? (
+                          <RefreshCw size={11} style={{ animation: 'spin 0.8s linear infinite' }} />
+                        ) : (
+                          <Power size={11} />
+                        )}
+                        Turn Off
+                      </button>
                     </div>
                   ))}
               </div>
@@ -163,13 +343,13 @@ const LoadManagement = () => {
         </div>
       )}
 
-      {/* ── KPI SUMMARY ────────────────────────────────────────── */}
+      {/* ── KPI SUMMARY CARDS ────────────────────────────────────── */}
       <div className="lm-kpi-row">
         {[
-          { label: 'Total Active Load',     value: `${displayTotal.toFixed(1)} kW`, sub: 'All monitored loads combined',        color: 'var(--accent-light)', icon: <Zap size={16} /> },
-          { label: 'Critical Load',         value: `${criticalPower.toFixed(1)} kW`, sub: `${PROTOTYPE_LOADS.critical.length} essential loads`,  color: 'var(--success)',      icon: <ShieldCheck size={16} /> },
-          { label: 'Non-Critical Load',     value: `${nonCriticalPower.toFixed(1)} kW`, sub: `${PROTOTYPE_LOADS.non_critical.filter(l => localState[l.id] === 'ON').length} active categories`, color: 'var(--warning)', icon: <ShieldOff size={16} /> },
-          { label: 'Optimizable Capacity',  value: `${nonCriticalPower.toFixed(1)} kW`, sub: 'Available for optimization recommendation', color: 'var(--info)',    icon: <BrainCircuit size={16} /> },
+          { label: 'Critical Load', value: `${criticalPower.toFixed(1)} kW`, sub: `${loadsData?.critical.length ?? 0} loads (Admission, IT, Safety)`, color: 'var(--danger)', icon: <ShieldCheck size={16} /> },
+          { label: 'Active Non-Critical', value: `${nonCriticalOnPower.toFixed(1)} kW`, sub: `${loadsData?.non_critical.filter(l => l.status === 'ON').length ?? 0} active rooms/labs`, color: 'var(--warning)', icon: <Zap size={16} /> },
+          { label: 'Total Shed Savings', value: `${savedKw.toFixed(1)} kW`, sub: `${loadsData?.non_critical.filter(l => l.status === 'OFF').length ?? 0} loads safely isolated`, color: 'var(--success)', icon: <CheckCircle size={16} /> },
+          { label: 'Max Shed Capacity', value: `${(loadsData?.shed_available_kw ?? 0).toFixed(1)} kW`, sub: 'Available headroom to shed', color: 'var(--info)', icon: <ShieldOff size={16} /> },
         ].map(({ label, value, sub, color, icon }) => (
           <GlassCard key={label} style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -182,120 +362,248 @@ const LoadManagement = () => {
         ))}
       </div>
 
-      {/* ── LOAD PANELS ────────────────────────────────────────── */}
+      {/* ── FILTER & SEARCH BAR ──────────────────────────────────── */}
+      <div className="lm-filter-bar">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, minWidth: 0, width: '100%' }}>
+          <div className="floor-tabs">
+            {[
+              { id: 'ALL', label: 'All Zones (A-Block)' },
+              { id: '0', label: 'Ground Floor (Admin, Seminar Halls, Core)' },
+              { id: '1', label: 'Floor 1 (ME Classrooms + Programming Labs)' },
+              { id: '2', label: 'Floor 2 (EEE Dept — Machines, Power, LabVIEW)' },
+              { id: '3', label: 'Floor 3 (ECE Dept — DSP, VLSI, Comm, BME)' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setSelectedFloor(tab.id)}
+                className={`floor-tab-btn ${selectedFloor === tab.id ? 'active' : ''}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Quick Category Filter Pills */}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, marginRight: 4 }}>Filter:</span>
+            {[
+              { id: 'ALL', label: 'All Categories' },
+              { id: 'Classroom', label: '📚 12 Classrooms' },
+              { id: 'Laboratory', label: '🔬 13 Specialized Labs' },
+              { id: 'Office', label: '🏛️ Admin & Faculty' },
+              { id: 'Other', label: '🎭 Seminar Halls & Facilities' },
+            ].map(t => (
+              <button
+                key={t.id}
+                onClick={() => setSelectedType(t.id)}
+                style={{
+                  padding: '3px 10px',
+                  borderRadius: 20,
+                  border: selectedType === t.id ? '1px solid var(--accent-light)' : '1px solid var(--border-subtle)',
+                  background: selectedType === t.id ? 'var(--accent-dim)' : 'rgba(255,255,255,0.03)',
+                  color: selectedType === t.id ? 'var(--accent-light)' : 'var(--text-2)',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="search-box">
+          <Search size={14} style={{ color: 'var(--text-3)' }} />
+          <input
+            type="text"
+            placeholder="Search room (e.g. A-101, DSP, Principal, Admission)..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* ── PANELS (CRITICAL & NON-CRITICAL) ────────────────────── */}
       <div className="lm-panels">
 
-        {/* Critical Loads Panel */}
+        {/* 1. Critical Loads Panel */}
         <GlassCard className="flex flex-col" style={{ borderColor: 'rgba(16,185,129,0.25)', flex: 1 }}>
           <div className="section-header">
             <div className="section-icon success"><ShieldCheck size={16} /></div>
             <div>
               <div className="section-title">Critical Loads (Protected)</div>
-              <div className="section-subtitle">Essential supply — always ON, cannot be reduced</div>
+              <div className="section-subtitle">
+                Admission Office &middot; Central IT &middot; Fire Safety &mdash; Guaranteed uninterrupted power
+              </div>
             </div>
           </div>
 
           <div className="load-list">
-            {PROTOTYPE_LOADS.critical.map(load => (
-              <div key={load.id} className="load-row load-row-critical">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-                  <div className="load-type-dot" style={{ background: TYPE_DOT[load.type] ?? '#10b981' }} />
-                  <div style={{ minWidth: 0 }}>
-                    <div className="load-name">{load.name}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
-                      <span className="room-chip">{load.type}</span>
-                      <span style={{ marginLeft: 6 }}>{load.desc}</span>
+            {filteredCritical.length === 0 ? (
+              <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>
+                No critical loads match filter.
+              </div>
+            ) : (
+              filteredCritical.map(load => (
+                <div key={load.id} className="load-row load-row-critical">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                    <div className="load-type-dot" style={{ background: TYPE_COLORS[load.type] ?? '#10b981' }} />
+                    <div style={{ minWidth: 0 }}>
+                      <div className="load-name" title={load.name}>
+                        {load.name}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text-3)', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span className="room-chip">{load.zone}</span>
+                        <span>&middot;</span>
+                        <span style={{ color: TYPE_COLORS[load.type] ?? 'var(--text-2)', fontWeight: 600 }}>{load.type}</span>
+                        {load.id === 'LD-C01' && (
+                          <span style={{ color: '#f59e0b', fontWeight: 700, background: 'rgba(245,158,11,0.15)', padding: '1px 6px', borderRadius: 4, fontSize: 10 }}>
+                            ★ ADMISSION
+                          </span>
+                        )}
+                        {load.id === 'LD-C02' && (
+                          <span style={{ color: '#ec4899', fontWeight: 700, background: 'rgba(236,72,153,0.15)', padding: '1px 6px', borderRadius: 4, fontSize: 10 }}>
+                            ★ PRINCIPAL
+                          </span>
+                        )}
+                        {load.id === 'LD-C04' && (
+                          <span style={{ color: '#8b5cf6', fontWeight: 700, background: 'rgba(139,92,246,0.15)', padding: '1px 6px', borderRadius: 4, fontSize: 10 }}>
+                            ★ COE EXAM CELL
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-1)', minWidth: 54, textAlign: 'right' }}>
+                      {load.power_kw} kW
+                    </span>
+                    <div className="locked-pill">
+                      <Lock size={11} style={{ color: 'var(--success)' }} />
+                      <span>PROTECTED</span>
                     </div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                  <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-1)', minWidth: 54, textAlign: 'right' }}>
-                    {load.power_kw} kW
-                  </span>
-                  <div className="locked-pill">
-                    <Lock size={11} style={{ color: 'var(--success)' }} />
-                    <span>PROTECTED</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </GlassCard>
 
-        {/* Non-Critical Loads Panel */}
+        {/* 2. Non-Critical Loads Panel */}
         <GlassCard className="flex flex-col" style={{ borderColor: 'rgba(245,158,11,0.25)', flex: 1.2 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
             <div className="section-header" style={{ marginBottom: 0 }}>
               <div className="section-icon warning"><ShieldOff size={16} /></div>
               <div>
-                <div className="section-title">Non-Critical Loads (Optimizable)</div>
-                <div className="section-subtitle">Categories that can potentially be reduced during peak periods</div>
+                <div className="section-title">Non-Critical Loads (Controllable)</div>
+                <div className="section-subtitle">
+                  Classrooms A-101 to A-304, Specialized Labs &amp; Faculty Cabins
+                </div>
               </div>
+            </div>
+
+            <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
+              Showing {filteredNonCritical.length} loads
             </div>
           </div>
 
           <div className="load-list">
-            {PROTOTYPE_LOADS.non_critical.map(load => {
-              const isSuggested = suggestedForOptimization.includes(load.id) && isPeakAlert;
-              return (
-                <div
-                  key={load.id}
-                  className={`load-row load-row-on ${isSuggested ? 'load-row-suggested' : ''}`}
-                >
-                  {isSuggested && (
-                    <span className="load-suggest-badge">AI Suggestion</span>
-                  )}
+            {filteredNonCritical.length === 0 ? (
+              <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>
+                No non-critical loads match filter.
+              </div>
+            ) : (
+              filteredNonCritical
+                .sort((a, b) => b.power_kw - a.power_kw)
+                .map(load => {
+                  const isOn = load.status === 'ON';
+                  const isSuggested = aiSuggested.includes(load.id);
+                  const isLastShed = lastShed.includes(load.id);
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                  return (
                     <div
-                      className="load-type-dot"
-                      style={{
-                        background: TYPE_DOT[load.type] ?? '#94a3b8',
-                        boxShadow: `0 0 8px ${TYPE_DOT[load.type] ?? '#94a3b8'}`,
-                      }}
-                    />
-                    <div style={{ minWidth: 0 }}>
-                      <div className="load-name">{load.name}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
-                        <span className="room-chip">{load.type}</span>
-                        <span style={{ marginLeft: 6 }}>{load.desc}</span>
+                      key={load.id}
+                      className={`load-row ${isOn ? 'load-row-on' : 'load-row-off'} ${isSuggested && isOn ? 'load-row-suggested' : ''}`}
+                    >
+                      {isSuggested && isOn && (
+                        <span className="load-suggest-badge">AI Shed Pick</span>
+                      )}
+                      {isLastShed && !isOn && (
+                        <span className="load-shed-badge">Shed &check;</span>
+                      )}
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                        <div
+                          className="load-type-dot"
+                          style={{
+                            background: isOn ? (TYPE_COLORS[load.type] ?? '#94a3b8') : 'rgba(255,255,255,0.15)',
+                            boxShadow: isOn ? `0 0 8px ${TYPE_COLORS[load.type] ?? '#94a3b8'}` : 'none'
+                          }}
+                        />
+                        <div style={{ minWidth: 0 }}>
+                          <div className={`load-name ${!isOn ? 'dimmed' : ''}`} title={load.name}>
+                            {load.name}
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--text-3)', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                            <span className="room-chip">{load.zone}</span>
+                            <span>&middot;</span>
+                            <span style={{ color: isOn ? (TYPE_COLORS[load.type] ?? 'var(--text-2)') : 'var(--text-3)', fontWeight: 600 }}>
+                              {load.type}
+                            </span>
+                            {load.floor ? (
+                              <span style={{ fontSize: 10, color: 'var(--text-3)' }}>[Floor {load.floor}]</span>
+                            ) : null}
+                            {load.id === 'LD-F0-SEME' && (
+                              <span style={{ color: '#ec4899', fontWeight: 700, background: 'rgba(236,72,153,0.15)', padding: '1px 6px', borderRadius: 4, fontSize: 10 }}>
+                                ★ EAST AUDITORIUM
+                              </span>
+                            )}
+                            {load.id === 'LD-F0-SEMW' && (
+                              <span style={{ color: '#ec4899', fontWeight: 700, background: 'rgba(236,72,153,0.15)', padding: '1px 6px', borderRadius: 4, fontSize: 10 }}>
+                                ★ WEST AUDITORIUM
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                        <span style={{ fontSize: 13.5, fontWeight: 700, color: isOn ? 'var(--text-1)' : 'var(--text-3)', minWidth: 54, textAlign: 'right' }}>
+                          {isOn ? `${load.power_kw} kW` : '0 kW'}
+                        </span>
+
+                        <button
+                          id={`toggle-${load.id}`}
+                          onClick={() => handleToggle(load.id)}
+                          disabled={toggling === load.id}
+                          className={`toggle-btn ${isOn ? 'toggle-btn-on' : 'toggle-btn-off'}`}
+                        >
+                          {toggling === load.id ? (
+                            <RefreshCw size={12} style={{ animation: 'spin 0.8s linear infinite' }} />
+                          ) : (
+                            <Power size={12} />
+                          )}
+                          <span>{isOn ? 'Turn Off' : 'Turn On'}</span>
+                        </button>
                       </div>
                     </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                    <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-1)', minWidth: 54, textAlign: 'right' }}>
-                      {load.power_kw} kW
-                    </span>
-                    {/* Recommendation tag instead of control button */}
-                    {isSuggested ? (
-                      <div style={{
-                        padding: '5px 12px', borderRadius: 8,
-                        border: '1px solid rgba(245,158,11,0.4)',
-                        background: 'rgba(245,158,11,0.08)',
-                        color: 'var(--warning)',
-                        fontSize: 11, fontWeight: 700,
-                        display: 'flex', alignItems: 'center', gap: 5,
-                      }}>
-                        <BrainCircuit size={11} />
-                        Consider Reducing
-                      </div>
-                    ) : (
-                      <div style={{
-                        padding: '5px 12px', borderRadius: 8,
-                        border: '1px solid rgba(16,185,129,0.25)',
-                        background: 'rgba(16,185,129,0.05)',
-                        color: 'var(--success)',
-                        fontSize: 11, fontWeight: 600,
-                      }}>
-                        Within Range
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })
+            )}
           </div>
+
+          {/* Real-time savings summary */}
+          {savedKw > 0 && (
+            <div className="savings-banner">
+              <CheckCircle size={16} style={{ color: 'var(--success)', flexShrink: 0 }} />
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--success)' }}>
+                {savedKw.toFixed(1)} kW shaved off peak grid load by shedding {loadsData?.non_critical.filter(l => l.status === 'OFF').length} non-critical units.
+              </span>
+            </div>
+          )}
         </GlassCard>
 
       </div>

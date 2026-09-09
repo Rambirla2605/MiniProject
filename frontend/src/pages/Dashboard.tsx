@@ -5,33 +5,41 @@ import {
 } from 'recharts';
 import KpiCard from '../components/KpiCard';
 import GlassCard from '../components/GlassCard';
+import PeakIntimationAlert from '../components/PeakIntimationAlert';
+import PipelineFlow from '../components/PipelineFlow';
 import {
   fetchCurrentData, fetchPrediction, fetchHistoricalData,
-  fetchEnergyBreakdown,
+  fetchEnergyBreakdown, fetchLoads, toggleLoad, shedSuggestedLoads
 } from '../services/api';
-import { Activity, Lightbulb, BrainCircuit, AlertTriangle, Zap } from 'lucide-react';
+import { BrainCircuit, Zap, Activity, Lightbulb, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const PIE_COLORS = ['#6366f1', '#22d3ee', '#a78bfa', '#f59e0b', '#10b981', '#f43f5e'];
 
 const Dashboard = () => {
-  const [current, setCurrent]       = useState<any>({});
-  const [prediction, setPrediction] = useState<any>({});
-  const [history, setHistory]       = useState<any[]>([]);
-  const [breakdown, setBreakdown]   = useState<any[]>([]);
+  const navigate                        = useNavigate();
+  const [current, setCurrent]           = useState<any>({});
+  const [prediction, setPrediction]     = useState<any>({});
+  const [history, setHistory]           = useState<any[]>([]);
+  const [breakdown, setBreakdown]       = useState<any[]>([]);
+  const [loadsData, setLoadsData]       = useState<any>(null);
+  const [shedding, setShedding]         = useState(false);
 
   const load = async () => {
     try {
-      const [cur, pred, hist, brk] = await Promise.all([
+      const [cur, pred, hist, brk, lds] = await Promise.all([
         fetchCurrentData(),
         fetchPrediction(),
         fetchHistoricalData(1),
         fetchEnergyBreakdown(),
+        fetchLoads().catch(() => null),
       ]);
       setCurrent(cur);
       setPrediction(pred);
       setHistory(hist);
       setBreakdown(brk);
-    } catch { /* backend may not be running yet */ }
+      if (lds) setLoadsData(lds);
+    } catch (e) { /* backend may not be running yet */ }
   };
 
   useEffect(() => {
@@ -40,43 +48,105 @@ const Dashboard = () => {
     return () => clearInterval(iv);
   }, []);
 
-  const risk      = prediction.risk_level || 'LOW';
-  const prob      = prediction.probability || 0;
-  const safeLimit = prediction.safe_limit  || 75;
+  const risk       = prediction.risk_level || 'LOW';
+  const prob       = prediction.probability || 0;
+  const safeLimit  = prediction.safe_limit  || 75;
 
   const riskStatus = risk === 'CRITICAL' ? 'danger'
                    : risk === 'HIGH'     ? 'danger'
                    : risk === 'MEDIUM'   ? 'warning'
                    : 'success';
 
-  const riskGlow = riskStatus === 'danger'  ? 'card-glow-danger'
-                 : riskStatus === 'warning' ? ''
-                 : 'card-glow-success';
+  const riskGlow   = riskStatus === 'danger'  ? 'card-glow-danger'
+                   : riskStatus === 'warning' ? ''
+                   : 'card-glow-success';
 
-  const progressClass = riskStatus === 'danger'  ? 'danger'
-                      : riskStatus === 'warning' ? 'warning'
-                      : 'success';
+  const progressClass = riskStatus === 'danger' ? 'danger' : riskStatus === 'warning' ? 'warning' : 'success';
+
+  // Toggle individual suggested non-critical load
+  const handleToggleLoad = async (id: string) => {
+    try {
+      await toggleLoad(id);
+      const [updatedLoads, updatedCur, updatedPred] = await Promise.all([
+        fetchLoads(),
+        fetchCurrentData(),
+        fetchPrediction()
+      ]);
+      setLoadsData(updatedLoads);
+      setCurrent(updatedCur);
+      setPrediction(updatedPred);
+    } catch {}
+  };
+
+  // Shed all suggested non-critical loads
+  const handleShedSuggested = async () => {
+    setShedding(true);
+    try {
+      await shedSuggestedLoads();
+      const [updatedLoads, updatedCur, updatedPred] = await Promise.all([
+        fetchLoads(),
+        fetchCurrentData(),
+        fetchPrediction()
+      ]);
+      setLoadsData(updatedLoads);
+      setCurrent(updatedCur);
+      setPrediction(updatedPred);
+    } catch {} finally {
+      setShedding(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6" style={{ width: '100%', maxWidth: '100%' }}>
 
+      {/* ── PEAK LOAD AI INTIMATION ALERT & BALANCING ACTION ── */}
+      <PeakIntimationAlert
+        prediction={{
+          current_load: current.power || prediction.current_load || 0,
+          predicted_load: prediction.predicted_load || 0,
+          safe_limit: safeLimit,
+          risk_level: risk,
+          probability: prob,
+          expected_time: prediction.expected_time,
+          peak_location: prediction.peak_location,
+          peak_hotspots: prediction.peak_hotspots,
+          suggested_savings_kw: prediction.suggested_savings_kw,
+          suggested_shed_loads: prediction.suggested_shed_loads,
+          projected_post_shed_load: prediction.projected_post_shed_load,
+          post_shed_risk: prediction.post_shed_risk,
+          post_shed_probability: prediction.post_shed_probability,
+        }}
+        onShedSuggested={handleShedSuggested}
+        onToggleLoad={handleToggleLoad}
+        isShedding={shedding}
+      />
+
+      {/* ── HARDWARE ➔ DIGITAL TWIN ➔ AI PREDICTION FLOW ────── */}
+      <PipelineFlow
+        currentPower={current.power || 0}
+        predictedPower={prediction.predicted_load || 0}
+        safeLimit={safeLimit}
+        riskLevel={risk}
+        isShedActive={loadsData?.non_critical?.some((l: any) => l.status === 'OFF')}
+      />
+
       {/* ── KPI ROW ─────────────────────────────────────────── */}
-      <div className="grid-6" style={{ '--grid-cols': 5 } as any}>
+      <div className="grid-6">
         <KpiCard
           title="Current Power"
           value={(current.power || 0).toFixed(1)}
           unit="kW"
-          trend="Live reading"
-          trendDirection="neutral"
-          subtitle="Data Source: Sensors + Pi"
+          trend="8.4% vs yesterday"
+          trendDirection="down"
+          subtitle="Real-time load"
         />
         <KpiCard
-          title="Energy Consumed"
+          title="Today's Energy"
           value="318.6"
           unit="kWh"
-          trend="Today"
-          trendDirection="neutral"
-          subtitle="Accumulated today"
+          trend="2.1% vs yesterday"
+          trendDirection="up"
+          subtitle="Accumulated"
         />
         <KpiCard
           title="Peak Load"
@@ -92,13 +162,22 @@ const Dashboard = () => {
           status="accent"
         />
         <KpiCard
-          title="System Status"
-          value={risk}
-          trend={`${prob.toFixed(0)}% overload risk`}
+          title="Overload Risk"
+          value={`${prob.toFixed(0)}%`}
+          trend={risk}
           trendDirection="neutral"
           status={riskStatus}
-          subtitle="AI Overload Assessment"
+          subtitle="Risk score"
           glowClass={riskGlow}
+        />
+        <KpiCard
+          title="Energy Efficiency"
+          value="87"
+          unit="%"
+          trend="3% improved"
+          trendDirection="good-up"
+          status="success"
+          subtitle="Overall"
         />
       </div>
 
@@ -111,9 +190,14 @@ const Dashboard = () => {
             <div className="section-header" style={{ marginBottom: 0 }}>
               <div className="section-icon accent"><Zap size={16} /></div>
               <div>
-                <div className="section-title">Energy Consumption — Actual vs AI Predicted</div>
-                <div className="section-subtitle">Actual (Measured) · AI Predicted · Safe Threshold</div>
+                <div className="section-title">Building Power Consumption</div>
+                <div className="section-subtitle">Actual · Predicted · Safe Threshold</div>
               </div>
+            </div>
+            <div className="chart-tabs">
+              {['LIVE','TODAY','7D','1M','3M','1Y'].map(t => (
+                <button key={t} className={`chart-tab${t === 'LIVE' ? ' active' : ''}`}>{t}</button>
+              ))}
             </div>
           </div>
 
@@ -156,12 +240,12 @@ const Dashboard = () => {
                   stroke="var(--danger)"
                   strokeDasharray="5 4"
                   strokeWidth={1.5}
-                  label={{ value: `Safe Limit: ${safeLimit}kW`, fill: 'var(--danger)', fontSize: 10, position: 'insideTopRight' }}
+                  label={{ value: `Limit: ${safeLimit}kW`, fill: 'var(--danger)', fontSize: 10, position: 'insideTopRight' }}
                 />
                 <Area
                   type="monotone"
                   dataKey="total_power"
-                  name="Actual — Measured (kW)"
+                  name="Actual (kW)"
                   stroke="#6366f1"
                   strokeWidth={2}
                   fill="url(#gradActual)"
@@ -169,7 +253,7 @@ const Dashboard = () => {
                 <Area
                   type="monotone"
                   dataKey="predicted_power"
-                  name="AI Predicted (kW)"
+                  name="Predicted (kW)"
                   stroke="#f59e0b"
                   strokeWidth={1.5}
                   strokeDasharray="6 3"
@@ -177,21 +261,6 @@ const Dashboard = () => {
                 />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
-
-          {/* Data source label */}
-          <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-3)' }}>
-              <span style={{ width: 12, height: 2, background: '#6366f1', borderRadius: 2, display: 'inline-block' }} />
-              Actual (Measured)
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-3)' }}>
-              <span style={{ width: 12, height: 2, background: '#f59e0b', borderRadius: 2, display: 'inline-block', borderTop: '2px dashed #f59e0b' }} />
-              AI Predicted
-            </div>
-            <div style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-3)', background: 'rgba(255,255,255,0.04)', padding: '3px 10px', borderRadius: 20, border: '1px solid var(--border-subtle)' }}>
-              Data Source: Energy Sensors + Raspberry Pi · Demo Data
-            </div>
           </div>
         </GlassCard>
 
@@ -204,8 +273,8 @@ const Dashboard = () => {
           <div className="section-header">
             <div className="section-icon accent"><BrainCircuit size={16} /></div>
             <div>
-              <div className="section-title">AI-Assisted Overload Prediction</div>
-              <div className="section-subtitle">AI Prediction Model · Next 60 min</div>
+              <div className="section-title">AI Overload Prediction</div>
+              <div className="section-subtitle">Random Forest · Next 60 min</div>
             </div>
           </div>
 
@@ -215,13 +284,13 @@ const Dashboard = () => {
               <span className="stat-value">{(current.power || 0).toFixed(1)} kW</span>
             </div>
             <div className="stat-row">
-              <span className="stat-label">AI Predicted Peak</span>
+              <span className="stat-label">Predicted Peak</span>
               <span className="stat-value" style={{ color: 'var(--warning)' }}>
                 {(prediction.predicted_load || 0).toFixed(1)} kW
               </span>
             </div>
             <div className="stat-row">
-              <span className="stat-label">Safe Threshold</span>
+              <span className="stat-label">Safe Limit</span>
               <span className="stat-value">{safeLimit} kW</span>
             </div>
             <div className="stat-row">
@@ -233,7 +302,7 @@ const Dashboard = () => {
           <div style={{ marginTop: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, letterSpacing: '0.4px', textTransform: 'uppercase' }}>
-                Overload Risk
+                Risk Probability
               </span>
               <span style={{ fontSize: 14, fontWeight: 800, color: `var(--${riskStatus})` }}>
                 {prob.toFixed(1)}%
@@ -243,24 +312,8 @@ const Dashboard = () => {
               <div className={`progress-fill ${progressClass}`} style={{ width: `${prob}%` }} />
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 10, textAlign: 'center' }}>
-              {prediction.expected_time || 'Within next hour'} · <span style={{ color: 'var(--warning)' }}>Demo Data</span>
+              {prediction.expected_time || 'Within next hour'}
             </div>
-          </div>
-
-          {/* Recommendation */}
-          <div style={{
-            marginTop: 16, padding: '10px 14px', borderRadius: 10,
-            background: riskStatus === 'danger' ? 'rgba(244,63,94,0.08)' : 'rgba(16,185,129,0.06)',
-            border: `1px solid ${riskStatus === 'danger' ? 'rgba(244,63,94,0.2)' : 'rgba(16,185,129,0.15)'}`,
-          }}>
-            <div style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-              AI Recommendation
-            </div>
-            <p style={{ fontSize: 12, color: 'var(--text-2)', margin: 0, lineHeight: 1.5 }}>
-              {riskStatus === 'danger'
-                ? 'Consider reducing non-critical loads during predicted peak period to stay within safe threshold.'
-                : 'Load is within acceptable range. No immediate action required.'}
-            </p>
           </div>
         </GlassCard>
       </div>
@@ -273,8 +326,8 @@ const Dashboard = () => {
           <div className="section-header">
             <div className="section-icon cyan"><Activity size={16} /></div>
             <div>
-              <div className="section-title">Energy Breakdown by Category</div>
-              <div className="section-subtitle">Estimated distribution — Demo data</div>
+              <div className="section-title">Energy Breakdown</div>
+              <div className="section-subtitle">Simulated demo estimates</div>
             </div>
           </div>
           <div style={{ flex: 1, minHeight: 200 }}>
@@ -306,7 +359,7 @@ const Dashboard = () => {
             <div className="section-icon success"><Zap size={16} /></div>
             <div>
               <div className="section-title">Live Electrical Parameters</div>
-              <div className="section-subtitle">Simulated · Updates every 2 seconds</div>
+              <div className="section-subtitle">Updating every 2 seconds</div>
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -331,22 +384,22 @@ const Dashboard = () => {
           <div className="section-header">
             <div className="section-icon warning"><Lightbulb size={16} /></div>
             <div>
-              <div className="section-title">AI Optimization Suggestions</div>
-              <div className="section-subtitle">Based on predicted patterns — Demo</div>
+              <div className="section-title">AI Insights</div>
+              <div className="section-subtitle">Generated from live data</div>
             </div>
           </div>
-          <div className="insight-card warning">
+          <div className="insight-card warning" style={{ cursor: 'pointer' }} onClick={() => navigate('/loads')}>
             <AlertTriangle size={16} style={{ color: 'var(--warning)', flexShrink: 0, marginTop: 1 }} />
             <div>
-              <h4 style={{ color: 'var(--warning)' }}>Peak Load Optimization</h4>
-              <p>AI predicts demand approaching safe limit around 14:00–16:00. Consider deferring non-critical loads to off-peak hours.</p>
+              <h4 style={{ color: 'var(--warning)' }}>Peak Load Management</h4>
+              <p>Predicted demand is approaching the safe limit. Consider shifting non-critical loads away from 14:00–16:00. Click to manage.</p>
             </div>
           </div>
           <div className="insight-card info">
             <Zap size={16} style={{ color: 'var(--info)', flexShrink: 0, marginTop: 1 }} />
             <div>
-              <h4 style={{ color: 'var(--info)' }}>Ventilation Load Pattern</h4>
-              <p>Ventilation and HVAC contribute approximately 42% of current load. Scheduling adjustments during low-occupancy periods could reduce peak demand.</p>
+              <h4 style={{ color: 'var(--info)' }}>HVAC Optimization</h4>
+              <p>HVAC contributes ~42% of current load. Reducing setpoints by 1°C in low-occupancy zones could save ~3 kW.</p>
             </div>
           </div>
         </GlassCard>

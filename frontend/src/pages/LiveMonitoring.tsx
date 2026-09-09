@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { fetchCurrentData } from '../services/api';
 import { Activity, Zap, Thermometer, Droplets, Wifi } from 'lucide-react';
-import GlassCard from '../components/GlassCard';
-
+import { GlassCard } from '../components/GlassCard';
 interface Param {
   label: string;
   value: string;
@@ -40,9 +39,7 @@ const LiveMonitoring = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-1)', letterSpacing: '-0.3px' }}>Live Electrical Monitoring</h1>
-          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>
-            Real-time simulated sensor values · Energy Sensors via Raspberry Pi
-          </p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>Real-time simulated sensor values · A Block Main Distribution Panel</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--success-dim)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 20, padding: '6px 14px' }}>
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--success)', display: 'block', animation: 'pulse-dot 2s ease infinite', boxShadow: '0 0 8px var(--success)' }} />
@@ -123,8 +120,7 @@ const LiveMonitoring = () => {
 
       {/* Disclaimer */}
       <div style={{ padding: '10px 16px', borderRadius: 10, background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.6 }}>
-        <strong style={{ color: 'var(--info)' }}>DEMO DATA</strong> — All values shown are simulated to demonstrate the system's live monitoring capability.
-        Once energy meter sensors are connected via Raspberry Pi (REST API), this page will reflect actual measurements in real time.
+        <strong style={{ color: 'var(--info)' }}>DEMO DATA</strong> — All values shown are simulated to demonstrate the system's live monitoring capability. Once real ESP32/energy meter sensors from A Block are connected via MQTT or REST API, this page will automatically reflect actual measurements.
       </div>
     </div>
   );
