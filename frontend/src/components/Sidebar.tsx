@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Activity, BarChart2, BrainCircuit,
-  AlertTriangle, Cpu, Database, Bell, Settings, Zap, Power, X
+  Cpu, Database, Bell, Zap, Power, X, GitBranch
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -10,19 +10,18 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { name: 'Dashboard',        path: '/',          icon: LayoutDashboard, group: 'OVERVIEW' },
-  { name: 'Live Monitoring',  path: '/live',       icon: Activity,        group: 'OVERVIEW' },
-  { name: 'Energy Analytics', path: '/analytics',  icon: BarChart2,       group: 'ANALYSIS' },
-  { name: 'AI Prediction',    path: '/prediction', icon: BrainCircuit,    group: 'ANALYSIS' },
-  { name: 'Load Management',  path: '/loads',      icon: Power,           group: 'ANALYSIS' },
-  { name: 'Overload Detection',path: '/overload',  icon: AlertTriangle,   group: 'ANALYSIS' },
-  { name: 'Sensors',          path: '/sensors',    icon: Cpu,             group: 'INFRASTRUCTURE' },
-  { name: 'Historical Data',  path: '/history',    icon: Database,        group: 'INFRASTRUCTURE' },
-  { name: 'Alerts',           path: '/alerts',     icon: Bell,            group: 'INFRASTRUCTURE' },
-  { name: 'Settings',         path: '/settings',   icon: Settings,        group: 'INFRASTRUCTURE' },
+  { name: 'Dashboard',        path: '/',             icon: LayoutDashboard, group: 'OVERVIEW' },
+  { name: 'Live Monitoring',  path: '/live',          icon: Activity,        group: 'OVERVIEW' },
+  { name: 'Energy Analytics', path: '/analytics',     icon: BarChart2,       group: 'ANALYSIS' },
+  { name: 'AI Prediction',    path: '/prediction',    icon: BrainCircuit,    group: 'ANALYSIS' },
+  { name: 'Load Management',  path: '/loads',         icon: Power,           group: 'ANALYSIS' },
+  { name: 'Digital Twin',     path: '/digital-twin',  icon: GitBranch,       group: 'SYSTEM'   },
+  { name: 'Historical Data',  path: '/analytics',     icon: Database,        group: 'SYSTEM'   },
+  { name: 'Sensors',          path: '/sensors',       icon: Cpu,             group: 'SYSTEM'   },
+  { name: 'Alerts',           path: '/alerts',        icon: Bell,            group: 'SYSTEM'   },
 ];
 
-const groups = ['OVERVIEW', 'ANALYSIS', 'INFRASTRUCTURE'];
+const groups = ['OVERVIEW', 'ANALYSIS', 'SYSTEM'];
 
 const Sidebar = ({ isOpen, onClose }: SidebarProps) => (
   <>
@@ -35,8 +34,8 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => (
           <Zap size={18} color="white" />
         </div>
         <div className="sidebar-logo-text">
-          <strong>SMART ENERGY AI</strong>
-          <span>A Block Monitoring</span>
+          <strong>DIGITAL TWIN</strong>
+          <span>Engineering Prototype</span>
         </div>
         <button
           className="sidebar-close-btn"
@@ -55,7 +54,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => (
               <div className="sidebar-section-label">{group}</div>
               {items.map(({ name, path, icon: Icon }) => (
                 <NavLink
-                  key={path}
+                  key={`${name}-${path}`}
                   to={path}
                   className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
                   onClick={() => onClose?.()}
@@ -78,6 +77,10 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => (
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-light)', display: 'inline-block' }}></span>
             DEMO / SIMULATION
           </div>
+        </div>
+        <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 10, background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.6px', textTransform: 'uppercase', fontWeight: 600, marginBottom: 2 }}>Data Source</div>
+          <div style={{ fontSize: 11, color: 'var(--success)', fontWeight: 600 }}>Energy Sensors + Raspberry Pi</div>
         </div>
       </div>
     </div>

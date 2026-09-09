@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react';
 import { fetchPrediction } from '../services/api';
-import { BrainCircuit, CheckCircle, TrendingUp, AlertTriangle, Cpu } from 'lucide-react';
+import { BrainCircuit, TrendingUp, AlertTriangle, Cpu, Info } from 'lucide-react';
 import KpiCard from '../components/KpiCard';
 import GlassCard from '../components/GlassCard';
 
 const FEATURES = [
-  { icon: TrendingUp,    label: 'Previous 1h Power',    desc: 'Lag feature — captures short-term momentum' },
-  { icon: TrendingUp,    label: '24h Rolling Average',  desc: 'Smoothed baseline over the past day' },
-  { icon: TrendingUp,    label: 'Previous Day Power',   desc: 'Same-hour power from yesterday' },
-  { icon: AlertTriangle, label: 'Hour of Day',          desc: 'Captures intra-day consumption pattern' },
-  { icon: AlertTriangle, label: 'Day of Week / Month',  desc: 'Weekday vs weekend, monthly seasonality' },
-  { icon: Cpu,           label: 'Occupancy Profile',    desc: 'Working day flag and estimated occupancy' },
-  { icon: Cpu,           label: 'Temperature & Humidity', desc: 'Environmental factors affecting HVAC load' },
-  { icon: Cpu,           label: 'Working Day Flag',     desc: 'Binary: 1 if occupied working hours' },
+  { icon: TrendingUp,    label: 'Previous Hour Power',   desc: 'Short-term momentum — power from the last 60 minutes' },
+  { icon: TrendingUp,    label: '24-Hour Rolling Average',desc: 'Smoothed baseline over the past day' },
+  { icon: TrendingUp,    label: 'Previous Day (same hour)',desc: 'Same time-of-day power from yesterday' },
+  { icon: AlertTriangle, label: 'Hour of Day',            desc: 'Captures morning, afternoon, evening demand patterns' },
+  { icon: AlertTriangle, label: 'Day of Week / Month',    desc: 'Weekday vs weekend, monthly seasonality' },
+  { icon: Cpu,           label: 'Working Day Flag',       desc: 'Binary indicator: 1 if occupied working hours' },
+  { icon: Cpu,           label: 'Temperature',            desc: 'Environmental factor affecting ventilation load' },
+  { icon: Cpu,           label: 'Humidity',               desc: 'Environmental factor affecting HVAC load' },
 ];
 
 const AIPrediction = () => {
@@ -30,6 +30,7 @@ const AIPrediction = () => {
   const metrics  = prediction.metrics || {};
   const risk     = prediction.risk_level || 'LOW';
   const prob     = prediction.probability || 0;
+  const safeLimit = prediction.safe_limit || 75;
   const riskSt   = risk === 'CRITICAL' || risk === 'HIGH' ? 'danger' : risk === 'MEDIUM' ? 'warning' : 'success';
 
   const r2       = (metrics.r2  || 0);
@@ -46,15 +47,37 @@ const AIPrediction = () => {
           <span style={{ color: 'var(--accent-light)' }}><BrainCircuit size={24} /></span>
           AI Energy Prediction
         </h1>
-        <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>Random Forest Regressor · Chronological 80/20 Train-Test Split · Next 60-min Forecast</p>
+        <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>
+          AI Prediction Model · Trained on 6+ Months Historical Data · 60-Minute Forecast Horizon
+        </p>
+      </div>
+
+      {/* Methodology explanation */}
+      <div style={{
+        display: 'flex', alignItems: 'flex-start', gap: 14, padding: '14px 18px',
+        borderRadius: 12, background: 'rgba(99,102,241,0.07)',
+        border: '1px solid rgba(99,102,241,0.2)',
+      }}>
+        <span style={{ color: 'var(--accent-light)', flexShrink: 0, marginTop: 1 }}><Info size={18} /></span>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-light)', marginBottom: 4 }}>
+            How the AI Prediction Works
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.7, margin: 0 }}>
+            Historical energy-consumption data is analyzed to identify patterns — daily cycles, peak periods,
+            weekday vs weekend variation, and environmental factors. The AI model learns these patterns and uses
+            them to predict future consumption. Predictions are used to support energy optimization and
+            identify potential overload conditions before they occur.
+          </p>
+        </div>
       </div>
 
       {/* KPI row */}
       <div className="pred-metrics-grid">
-        <KpiCard title="Current Load"        value={(prediction.current_load   || 0).toFixed(1)} unit="kW" subtitle="Real-time" />
-        <KpiCard title="Predicted Load"      value={(prediction.predicted_load || 0).toFixed(1)} unit="kW" status="accent" subtitle="Next 60 min" />
-        <KpiCard title="Safe Limit"          value={prediction.safe_limit || 75} unit="kW" subtitle="Configurable" />
-        <KpiCard title="Overload Probability" value={`${prob.toFixed(0)}%`} status={riskSt} subtitle={`Risk: ${risk}`} />
+        <KpiCard title="Current Load"        value={(prediction.current_load   || 0).toFixed(1)} unit="kW" subtitle="Real-time · Demo Data" />
+        <KpiCard title="AI Predicted Load"   value={(prediction.predicted_load || 0).toFixed(1)} unit="kW" status="accent" subtitle="Next 60 min · Demo Data" />
+        <KpiCard title="Safe Threshold"      value={safeLimit} unit="kW" subtitle="Configurable limit" />
+        <KpiCard title="Overload Risk"       value={`${prob.toFixed(0)}%`} status={riskSt} subtitle={`Level: ${risk} · Demo`} />
       </div>
 
       {/* Model Metrics + Features */}
@@ -65,12 +88,12 @@ const AIPrediction = () => {
           <div className="section-header">
             <div className="section-icon accent"><Cpu size={16} /></div>
             <div>
-              <div className="section-title">Model Performance Metrics</div>
-              <div className="section-subtitle">Evaluated on last 20% of chronological data</div>
+              <div className="section-title">Model Evaluation (Demo Dataset)</div>
+              <div className="section-subtitle">Metrics from training on simulated historical data</div>
             </div>
           </div>
 
-          {/* R² big display */}
+          {/* R² display */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '16px', borderRadius: 14, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--glass-border)' }}>
             <div style={{ position: 'relative', width: 80, height: 80, flexShrink: 0 }}>
               <svg width="80" height="80" viewBox="0 0 80 80">
@@ -92,7 +115,8 @@ const AIPrediction = () => {
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', marginBottom: 4 }}>R² Score</div>
               <div style={{ fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.6 }}>
-                The model explains <strong style={{ color: 'var(--success)' }}>{r2Pct}%</strong> of the variance in power consumption — indicating strong predictive accuracy.
+                The model explains <strong style={{ color: 'var(--accent-light)' }}>{r2Pct}%</strong> of the variance
+                in the training dataset. Evaluated on the demo simulation data.
               </div>
             </div>
           </div>
@@ -111,13 +135,10 @@ const AIPrediction = () => {
             </div>
           </div>
 
-          {/* Green status */}
-          <div className="insight-card success" style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-            <CheckCircle size={16} style={{ color: 'var(--success)', flexShrink: 0, marginTop: 1 }} />
-            <div>
-              <h4 style={{ color: 'var(--success)' }}>Model is well-fitted</h4>
-              <p>High R² and low MAE confirm the model has learned the academic building's energy patterns effectively from the simulated 5-year dataset.</p>
-            </div>
+          {/* Honest disclaimer */}
+          <div style={{ padding: '12px 14px', borderRadius: 10, background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.6 }}>
+            <strong style={{ color: 'var(--info)' }}>Note:</strong> Metrics are computed on the demo simulation dataset.
+            Real-world accuracy will depend on actual sensor data collected via Raspberry Pi.
           </div>
         </GlassCard>
 
@@ -127,13 +148,13 @@ const AIPrediction = () => {
             <div className="section-icon accent"><BrainCircuit size={16} /></div>
             <div>
               <div className="section-title">Prediction Feature Set</div>
-              <div className="section-subtitle">Inputs used by Random Forest Regressor</div>
+              <div className="section-subtitle">Input variables used by the AI model</div>
             </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {FEATURES.map(({ icon: Icon, label, desc }) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--glass-border)', transition: 'border-color 0.2s' }}>
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--glass-border)' }}>
                 <span style={{ color: 'var(--accent-light)', flexShrink: 0 }}><Icon size={14} /></span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-1)' }}>{label}</div>
@@ -145,6 +166,43 @@ const AIPrediction = () => {
           </div>
         </GlassCard>
       </div>
+
+      {/* ── AI-Assisted Overload Prediction (merged from removed page) ── */}
+      <GlassCard>
+        <div className="section-header" style={{ marginBottom: 16 }}>
+          <div className="section-icon warning"><AlertTriangle size={16} /></div>
+          <div>
+            <div className="section-title">AI-Assisted Overload Prediction</div>
+            <div className="section-subtitle">Current vs predicted vs safe threshold · Demo Data</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 16 }}>
+          {[
+            { label: 'Current Load',    value: `${(prediction.current_load || 0).toFixed(1)} kW`, color: 'var(--text-1)' },
+            { label: 'AI Predicted Peak',value: `${(prediction.predicted_load || 0).toFixed(1)} kW`, color: 'var(--warning)' },
+            { label: 'Safe Threshold',  value: `${safeLimit} kW`, color: 'var(--success)' },
+            { label: 'Overload Risk',   value: risk, color: `var(--${riskSt})` },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={{ padding: '14px', borderRadius: 12, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--glass-border)', textAlign: 'center' }}>
+              <div style={{ fontSize: 10.5, color: 'var(--text-3)', fontWeight: 600, letterSpacing: '0.6px', textTransform: 'uppercase', marginBottom: 8 }}>{label}</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color }}>{value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ padding: '12px 16px', borderRadius: 10, background: riskSt === 'danger' ? 'rgba(244,63,94,0.07)' : 'rgba(16,185,129,0.06)', border: `1px solid ${riskSt === 'danger' ? 'rgba(244,63,94,0.2)' : 'rgba(16,185,129,0.15)'}` }}>
+          <div style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.4px' }}>AI Recommendation</div>
+          <p style={{ fontSize: 12.5, color: 'var(--text-2)', margin: 0, lineHeight: 1.6 }}>
+            {riskSt === 'danger'
+              ? 'Predicted peak load may approach or exceed the safe threshold. Consider reducing non-critical loads during the next hour to prevent potential overload.'
+              : riskSt === 'warning'
+              ? 'Load is elevated relative to the safe threshold. Monitor consumption and consider deferring non-essential loads.'
+              : 'System is operating within safe bounds. No immediate optimization action required.'}
+          </p>
+        </div>
+      </GlassCard>
+
     </div>
   );
 };
