@@ -96,7 +96,8 @@ const Dashboard = () => {
   nonCriticalOn.sort((a, b) => b.power_kw - a.power_kw);
   const suggestedLoads = nonCriticalOn.slice(0, 4);
   const suggestedSavings = suggestedLoads.reduce((sum, l) => sum + l.power_kw, 0);
-  const isPeakAlert = risk === 'HIGH' || risk === 'CRITICAL' || prob >= 60 || (current.power || 0) >= 60;
+  // Only show peak alert when risk is genuinely HIGH or CRITICAL
+  const isPeakAlert = risk === 'HIGH' || risk === 'CRITICAL' || prob >= 80 || (current.power || 0) >= 70;
 
   return (
     <div className="flex flex-col gap-6" style={{ width: '100%', maxWidth: '100%' }}>

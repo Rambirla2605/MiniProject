@@ -145,7 +145,7 @@ const LoadManagement = () => {
     if (selectedFloor === '1' && load.floor !== 1) return false;
     if (selectedFloor === '2' && load.floor !== 2) return false;
     if (selectedFloor === '3' && load.floor !== 3) return false;
-    if (selectedFloor === 'COMMON' && load.floor !== 0) return false;
+    if (selectedFloor === '0' && load.floor !== 0) return false;
 
     // Category / Type check
     if (selectedType === 'Classroom' && load.type !== 'Classroom') return false;
@@ -173,13 +173,13 @@ const LoadManagement = () => {
       {/* Page Header */}
       <div className="lm-header-bar">
         <div>
-          <div className="flex items-center gap-2" style={{ marginBottom: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginBottom: 4 }}>
             <span className="badge badge-accent" style={{ fontSize: 11, padding: '3px 8px' }}>
               <Building2 size={12} style={{ display: 'inline', marginRight: 4 }} />
               Dr. N.G.P. Institute of Technology
             </span>
             <span className="badge badge-info" style={{ fontSize: 11, padding: '3px 8px' }}>
-              A-Block &middot; 3 Floors &middot; 12 Classrooms &middot; 13 Labs &middot; East &amp; West Seminar Halls
+              A-Block · Ground Floor: Admin + Seminar Halls · F1: ME Labs · F2: EEE · F3: ECE
             </span>
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-1)', letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -187,7 +187,8 @@ const LoadManagement = () => {
             Smart Load Management &amp; Peak Shedding
           </h1>
           <p style={{ fontSize: 12.5, color: 'var(--text-2)', marginTop: 2 }}>
-            Real-time isolation of Critical infrastructure (Admission, Principal, CoE, Server Room) vs Non-Critical classrooms (A-101 to A-304), department labs (DSP, VLSI, Communication, Machines, Programming), and East/West Seminar Halls.
+            Ground Floor: Admin Offices, East &amp; West Seminar Halls · Floor 1: ME Classrooms + Programming Labs ·
+            Floor 2: EEE Dept (Electrical Machines, Power Electronics, LabVIEW) · Floor 3: ECE Dept (DSP, VLSI, Communication, Biomedical Labs)
           </p>
         </div>
 
@@ -367,10 +368,10 @@ const LoadManagement = () => {
           <div className="floor-tabs">
             {[
               { id: 'ALL', label: 'All Zones (A-Block)' },
-              { id: '1', label: 'Floor 1 (Classrooms A101-104, DSP, Comm & Machines)' },
-              { id: '2', label: 'Floor 2 (Classrooms A201-204, VLSI, TI & Prog)' },
-              { id: '3', label: 'Floor 3 (Classrooms A301-304, Bio & MATLAB)' },
-              { id: 'COMMON', label: 'East & West Seminar Halls & Campus Core' },
+              { id: '0', label: 'Ground Floor (Admin, Seminar Halls, Core)' },
+              { id: '1', label: 'Floor 1 (ME Classrooms + Programming Labs)' },
+              { id: '2', label: 'Floor 2 (EEE Dept — Machines, Power, LabVIEW)' },
+              { id: '3', label: 'Floor 3 (ECE Dept — DSP, VLSI, Comm, BME)' },
             ].map(tab => (
               <button
                 key={tab.id}

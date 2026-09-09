@@ -8,64 +8,62 @@ import json
 import copy
 
 # ── Load Registry (Dr. N.G.P. Institute of Technology - A Block) ─────────────
-# Real-world campus circuit departments (ECE, EEE, BME), 12 Smart Classrooms,
-# Separate DSP & VLSI Labs, Communication Lab, Programming Labs, Admin Offices,
-# and East & West Seminar Halls (opposite each other on Ground Floor).
+# Actual A-Block layout:
+#   Ground/Floor 1 : Admin offices + ME/Common classrooms + Programming Labs
+#                    East & West Seminar Halls (opposite each other)
+#   Floor 2        : EEE Department — classrooms + EEE labs
+#   Floor 3        : ECE Department — classrooms + ECE/BME labs
 _LOAD_REGISTRY = [
     # ── CRITICAL LOADS (Protected - Cannot be shed) ──────────────────────────
-    {"id": "LD-C01", "name": "Admission & Student Affairs Office",   "zone": "A-Block Ground Floor", "type": "Office",     "floor": 1, "power_kw": 4.8, "critical": True,  "status": "ON"},
-    {"id": "LD-C02", "name": "Principal's Office & Boardroom",       "zone": "A-Block Floor 1",       "type": "Office",     "floor": 1, "power_kw": 3.5, "critical": True,  "status": "ON"},
-    {"id": "LD-C03", "name": "Dean & Administrative Office",         "zone": "A-Block Floor 1",       "type": "Office",     "floor": 1, "power_kw": 4.2, "critical": True,  "status": "ON"},
-    {"id": "LD-C04", "name": "Controller of Examinations (CoE) Cell", "zone": "A-Block Floor 1",       "type": "Office",     "floor": 1, "power_kw": 3.2, "critical": True,  "status": "ON"},
-    {"id": "LD-C05", "name": "Server Room & Central IT Hub",         "zone": "A-Block Core",          "type": "IT",         "floor": 1, "power_kw": 8.5, "critical": True,  "status": "ON"},
-    {"id": "LD-C06", "name": "Campus Fire Safety & Hydrant System",  "zone": "All Floors",            "type": "Safety",     "floor": 0, "power_kw": 1.5, "critical": True,  "status": "ON"},
-    {"id": "LD-C07", "name": "Emergency Staircase & Exit Lighting",  "zone": "All Floors",            "type": "Lighting",   "floor": 0, "power_kw": 2.5, "critical": True,  "status": "ON"},
-    {"id": "LD-C08", "name": "CCTV Surveillance & Security Hub",     "zone": "Security Core",         "type": "Security",   "floor": 0, "power_kw": 2.0, "critical": True,  "status": "ON"},
-    {"id": "LD-C09", "name": "Campus Health Centre & First Aid",     "zone": "A-Block Ground Floor", "type": "Medical",    "floor": 1, "power_kw": 2.8, "critical": True,  "status": "ON"},
+    {"id": "LD-C01", "name": "Admission & Student Affairs Office",    "zone": "A-Block Ground Floor",       "type": "Office",     "floor": 0, "power_kw": 4.8, "critical": True,  "status": "ON"},
+    {"id": "LD-C02", "name": "Principal's Office & Boardroom",        "zone": "A-Block Ground Floor",       "type": "Office",     "floor": 0, "power_kw": 3.5, "critical": True,  "status": "ON"},
+    {"id": "LD-C03", "name": "Dean & Administrative Office",          "zone": "A-Block Ground Floor",       "type": "Office",     "floor": 0, "power_kw": 4.2, "critical": True,  "status": "ON"},
+    {"id": "LD-C04", "name": "Controller of Examinations (CoE) Cell", "zone": "A-Block Ground Floor",       "type": "Office",     "floor": 0, "power_kw": 3.2, "critical": True,  "status": "ON"},
+    {"id": "LD-C05", "name": "Server Room & Central IT Hub",          "zone": "A-Block Core",               "type": "IT",         "floor": 0, "power_kw": 8.5, "critical": True,  "status": "ON"},
+    {"id": "LD-C06", "name": "Campus Fire Safety & Hydrant System",   "zone": "All Floors",                 "type": "Safety",     "floor": 0, "power_kw": 1.5, "critical": True,  "status": "ON"},
+    {"id": "LD-C07", "name": "Emergency Staircase & Exit Lighting",   "zone": "All Floors",                 "type": "Lighting",   "floor": 0, "power_kw": 2.5, "critical": True,  "status": "ON"},
+    {"id": "LD-C08", "name": "CCTV Surveillance & Security Hub",      "zone": "Security Core",              "type": "Security",   "floor": 0, "power_kw": 2.0, "critical": True,  "status": "ON"},
+    {"id": "LD-C09", "name": "Campus Health Centre & First Aid",      "zone": "A-Block Ground Floor",       "type": "Medical",    "floor": 0, "power_kw": 2.8, "critical": True,  "status": "ON"},
 
-    # ── FACULTY & DEPARTMENT OFFICES (Circuit Branches) ──────────────────────
-    {"id": "LD-F1-HOD", "name": "ECE Department HoD & Faculty Lounge", "zone": "A-Block Floor 1", "type": "Office",     "floor": 1, "power_kw": 2.6, "critical": False, "status": "ON"},
-    {"id": "LD-F2-HOD", "name": "EEE Department HoD & Faculty Lounge", "zone": "A-Block Floor 2", "type": "Office",     "floor": 2, "power_kw": 2.4, "critical": False, "status": "ON"},
-    {"id": "LD-F3-HOD", "name": "BME Department HoD & Faculty Lounge", "zone": "A-Block Floor 3", "type": "Office",     "floor": 3, "power_kw": 2.4, "critical": False, "status": "ON"},
+    # ── FLOOR 1: ME / COMMON CLASSROOMS & PROGRAMMING LABS ───────────────────
+    # 2-3 ME classrooms (left wing, front) + 2 Programming Labs (right/middle)
+    {"id": "LD-F1-HOD", "name": "ME / Common Dept. Staff Room",         "zone": "A-Block Floor 1",           "type": "Office",     "floor": 1, "power_kw": 1.8, "critical": False, "status": "ON"},
+    {"id": "LD-F1-101", "name": "Classroom A-101 (ME — Theory)",        "zone": "A-Block Floor 1 · Left",    "type": "Classroom",  "floor": 1, "power_kw": 2.4, "critical": False, "status": "ON"},
+    {"id": "LD-F1-102", "name": "Classroom A-102 (ME — Theory)",        "zone": "A-Block Floor 1 · Left",    "type": "Classroom",  "floor": 1, "power_kw": 2.4, "critical": False, "status": "ON"},
+    {"id": "LD-F1-103", "name": "Classroom A-103 (ME / Common Hall)",   "zone": "A-Block Floor 1 · Centre",  "type": "Classroom",  "floor": 1, "power_kw": 2.2, "critical": False, "status": "ON"},
+    {"id": "LD-F1-PROG1","name": "Programming Lab I (C / Python)",      "zone": "A-Block Floor 1 · Right",   "type": "Laboratory", "floor": 1, "power_kw": 7.5, "critical": False, "status": "ON"},
+    {"id": "LD-F1-PROG2","name": "Programming Lab II (Data Structures)","zone": "A-Block Floor 1 · Right",   "type": "Laboratory", "floor": 1, "power_kw": 7.5, "critical": False, "status": "ON"},
 
-    # ── FLOOR 1: 4 CLASSROOMS & 4 LABS (ECE / EEE) ───────────────────────────
-    {"id": "LD-F1-101", "name": "Classroom A-101 (Smart Class - ECE)", "zone": "A-Block Floor 1", "type": "Classroom",  "floor": 1, "power_kw": 2.4, "critical": False, "status": "ON"},
-    {"id": "LD-F1-102", "name": "Classroom A-102 (Smart Class - ECE)", "zone": "A-Block Floor 1", "type": "Classroom",  "floor": 1, "power_kw": 2.2, "critical": False, "status": "ON"},
-    {"id": "LD-F1-LAB1","name": "Circuits & Electronic Devices Lab",   "zone": "A-Block Floor 1", "type": "Laboratory", "floor": 1, "power_kw": 6.8, "critical": False, "status": "ON"},
-    {"id": "LD-F1-103", "name": "Classroom A-103 (Multimedia - EEE)",  "zone": "A-Block Floor 1", "type": "Classroom",  "floor": 1, "power_kw": 2.4, "critical": False, "status": "ON"},
-    {"id": "LD-F1-104", "name": "Classroom A-104 (Lecture Hall - EEE)", "zone": "A-Block Floor 1", "type": "Classroom",  "floor": 1, "power_kw": 2.5, "critical": False, "status": "ON"},
-    {"id": "LD-F1-DSP", "name": "Digital Signal Processing (DSP) Lab",  "zone": "A-Block Floor 1", "type": "Laboratory", "floor": 1, "power_kw": 6.5, "critical": False, "status": "ON"},
-    {"id": "LD-F1-COMM","name": "Analog & Digital Communication Lab",   "zone": "A-Block Floor 1", "type": "Laboratory", "floor": 1, "power_kw": 6.8, "critical": False, "status": "ON"},
-    {"id": "LD-F1-MACH","name": "Electrical Machines & Control Lab",    "zone": "A-Block Floor 1", "type": "Laboratory", "floor": 1, "power_kw": 13.5,"critical": False, "status": "ON"},
+    # ── SEMINAR HALLS — Ground / Floor 1 level (East & West, opposite sides) ─
+    {"id": "LD-F0-SEME","name": "East Seminar Hall (150-Seater AV/AC)", "zone": "A-Block Ground Floor · East","type": "Auditorium", "floor": 0, "power_kw": 11.5,"critical": False, "status": "ON"},
+    {"id": "LD-F0-SEMW","name": "West Seminar Hall (150-Seater AV/AC)", "zone": "A-Block Ground Floor · West","type": "Auditorium", "floor": 0, "power_kw": 11.5,"critical": False, "status": "ON"},
 
-    # ── FLOOR 2: 4 CLASSROOMS & 5 LABS (ECE / EEE / COMPUTING) ───────────────
-    {"id": "LD-F2-201", "name": "Classroom A-201 (Smart Class - ECE)", "zone": "A-Block Floor 2", "type": "Classroom",  "floor": 2, "power_kw": 2.4, "critical": False, "status": "ON"},
-    {"id": "LD-F2-202", "name": "Classroom A-202 (Smart Class - ECE)", "zone": "A-Block Floor 2", "type": "Classroom",  "floor": 2, "power_kw": 2.2, "critical": False, "status": "ON"},
-    {"id": "LD-F2-VLSI","name": "VLSI Design & EDA Tools Laboratory",   "zone": "A-Block Floor 2", "type": "Laboratory", "floor": 2, "power_kw": 7.2, "critical": False, "status": "ON"},
-    {"id": "LD-F2-TI",  "name": "TI Innovation & Embedded Systems Lab", "zone": "A-Block Floor 2", "type": "Laboratory", "floor": 2, "power_kw": 6.2, "critical": False, "status": "ON"},
-    {"id": "LD-F2-203", "name": "Classroom A-203 (Smart Class - BME)", "zone": "A-Block Floor 2", "type": "Classroom",  "floor": 2, "power_kw": 2.4, "critical": False, "status": "ON"},
-    {"id": "LD-F2-204", "name": "Classroom A-204 (Lecture Hall - BME)","zone": "A-Block Floor 2", "type": "Classroom",  "floor": 2, "power_kw": 2.2, "critical": False, "status": "ON"},
-    {"id": "LD-F2-PROG","name": "Programming & Data Structures Lab",    "zone": "A-Block Floor 2", "type": "Laboratory", "floor": 2, "power_kw": 8.5, "critical": False, "status": "ON"},
-    {"id": "LD-F2-PE",  "name": "Power Electronics & Drives Lab",       "zone": "A-Block Floor 2", "type": "Laboratory", "floor": 2, "power_kw": 11.2,"critical": False, "status": "ON"},
-    {"id": "LD-F2-VIEW","name": "NI LabVIEW Virtual Instrumentation",   "zone": "A-Block Floor 2", "type": "Laboratory", "floor": 2, "power_kw": 8.4, "critical": False, "status": "ON"},
+    # ── FLOOR 2: EEE DEPARTMENT — Classrooms + EEE Labs ──────────────────────
+    {"id": "LD-F2-HOD", "name": "EEE Department HoD & Faculty Lounge", "zone": "A-Block Floor 2",           "type": "Office",     "floor": 2, "power_kw": 2.4, "critical": False, "status": "ON"},
+    {"id": "LD-F2-201", "name": "Classroom A-201 (EEE — Theory)",      "zone": "A-Block Floor 2 · Left",    "type": "Classroom",  "floor": 2, "power_kw": 2.4, "critical": False, "status": "ON"},
+    {"id": "LD-F2-202", "name": "Classroom A-202 (EEE — Theory)",      "zone": "A-Block Floor 2 · Left",    "type": "Classroom",  "floor": 2, "power_kw": 2.2, "critical": False, "status": "ON"},
+    {"id": "LD-F2-203", "name": "Classroom A-203 (EEE — Multimedia)",  "zone": "A-Block Floor 2 · Centre",  "type": "Classroom",  "floor": 2, "power_kw": 2.4, "critical": False, "status": "ON"},
+    {"id": "LD-F2-204", "name": "Classroom A-204 (EEE — Lecture Hall)","zone": "A-Block Floor 2 · Centre",  "type": "Classroom",  "floor": 2, "power_kw": 2.2, "critical": False, "status": "ON"},
+    {"id": "LD-F2-MACH","name": "Electrical Machines & Control Lab",   "zone": "A-Block Floor 2 · Right",   "type": "Laboratory", "floor": 2, "power_kw": 13.5,"critical": False, "status": "ON"},
+    {"id": "LD-F2-PE",  "name": "Power Electronics & Drives Lab",      "zone": "A-Block Floor 2 · Right",   "type": "Laboratory", "floor": 2, "power_kw": 11.2,"critical": False, "status": "ON"},
+    {"id": "LD-F2-VIEW","name": "NI LabVIEW & Virtual Instrumentation","zone": "A-Block Floor 2 · Right",   "type": "Laboratory", "floor": 2, "power_kw": 8.4, "critical": False, "status": "ON"},
 
-    # ── FLOOR 3: 4 CLASSROOMS & 4 LABS (BME & ADVANCED COMPUTING) ───────────
-    {"id": "LD-F3-301", "name": "Classroom A-301 (Circuit Depts Hall)", "zone": "A-Block Floor 3", "type": "Classroom",  "floor": 3, "power_kw": 2.4, "critical": False, "status": "ON"},
-    {"id": "LD-F3-302", "name": "Classroom A-302 (Digital Seminar Rm)", "zone": "A-Block Floor 3", "type": "Classroom",  "floor": 3, "power_kw": 2.4, "critical": False, "status": "ON"},
-    {"id": "LD-F3-LAB1","name": "Biomedical Instrumentation & Diag Lab","zone": "A-Block Floor 3", "type": "Laboratory", "floor": 3, "power_kw": 7.8, "critical": False, "status": "ON"},
-    {"id": "LD-F3-303", "name": "Classroom A-303 (Tutorial Hall)",      "zone": "A-Block Floor 3", "type": "Classroom",  "floor": 3, "power_kw": 1.8, "critical": False, "status": "ON"},
-    {"id": "LD-F3-304", "name": "Classroom A-304 (CAD & Drawing Hall)", "zone": "A-Block Floor 3", "type": "Classroom",  "floor": 3, "power_kw": 3.6, "critical": False, "status": "ON"},
-    {"id": "LD-F3-LAB2","name": "Bio-Signals & Medical Sensors Lab",    "zone": "A-Block Floor 3", "type": "Laboratory", "floor": 3, "power_kw": 7.2, "critical": False, "status": "ON"},
-    {"id": "LD-F3-SIM", "name": "Computer Simulation & MATLAB EDA Lab", "zone": "A-Block Floor 3", "type": "Laboratory", "floor": 3, "power_kw": 9.5, "critical": False, "status": "ON"},
-    {"id": "LD-F3-OOP", "name": "OOP & Software Systems Lab",          "zone": "A-Block Floor 3", "type": "Laboratory", "floor": 3, "power_kw": 8.8, "critical": False, "status": "ON"},
+    # ── FLOOR 3: ECE DEPARTMENT — Classrooms + ECE / BME Labs ─────────────────
+    {"id": "LD-F3-HOD", "name": "ECE Department HoD & Faculty Lounge", "zone": "A-Block Floor 3",           "type": "Office",     "floor": 3, "power_kw": 2.6, "critical": False, "status": "ON"},
+    {"id": "LD-F3-301", "name": "Classroom A-301 (ECE — Theory)",      "zone": "A-Block Floor 3 · Left",    "type": "Classroom",  "floor": 3, "power_kw": 2.4, "critical": False, "status": "ON"},
+    {"id": "LD-F3-302", "name": "Classroom A-302 (ECE — Multimedia)",  "zone": "A-Block Floor 3 · Left",    "type": "Classroom",  "floor": 3, "power_kw": 2.4, "critical": False, "status": "ON"},
+    {"id": "LD-F3-303", "name": "Classroom A-303 (ECE — Tutorial)",    "zone": "A-Block Floor 3 · Centre",  "type": "Classroom",  "floor": 3, "power_kw": 1.8, "critical": False, "status": "ON"},
+    {"id": "LD-F3-304", "name": "Classroom A-304 (ECE — Drawing Hall)","zone": "A-Block Floor 3 · Centre",  "type": "Classroom",  "floor": 3, "power_kw": 3.6, "critical": False, "status": "ON"},
+    {"id": "LD-F3-DSP", "name": "Digital Signal Processing (DSP) Lab", "zone": "A-Block Floor 3 · Right",   "type": "Laboratory", "floor": 3, "power_kw": 6.5, "critical": False, "status": "ON"},
+    {"id": "LD-F3-VLSI","name": "VLSI Design & EDA Tools Laboratory",  "zone": "A-Block Floor 3 · Right",   "type": "Laboratory", "floor": 3, "power_kw": 7.2, "critical": False, "status": "ON"},
+    {"id": "LD-F3-COMM","name": "Analog & Digital Communication Lab",  "zone": "A-Block Floor 3 · Right",   "type": "Laboratory", "floor": 3, "power_kw": 6.8, "critical": False, "status": "ON"},
+    {"id": "LD-F3-BME", "name": "Biomedical Instrumentation Lab",      "zone": "A-Block Floor 3 · Right",   "type": "Laboratory", "floor": 3, "power_kw": 7.8, "critical": False, "status": "ON"},
 
-    # ── AUDITORIUMS & COMMON CAMPUS FACILITIES (A-Block) ─────────────────────
-    {"id": "LD-F0-SEME","name": "East Seminar Hall (150-Seater AV/AC)",  "zone": "A-Block Ground Floor - East", "type": "Auditorium", "floor": 1, "power_kw": 11.5,"critical": False, "status": "ON"},
-    {"id": "LD-F0-SEMW","name": "West Seminar Hall (150-Seater AV/AC)",  "zone": "A-Block Ground Floor - West", "type": "Auditorium", "floor": 1, "power_kw": 11.5,"critical": False, "status": "ON"},
-    {"id": "LD-F0-COR", "name": "A-Block Corridors & Stairway Lighting", "zone": "All Floors",                  "type": "Lighting",   "floor": 0, "power_kw": 4.8, "critical": False, "status": "ON"},
-    {"id": "LD-F0-HVAC","name": "A-Block Central Ventilation & Exhaust", "zone": "All Floors",                  "type": "HVAC",       "floor": 0, "power_kw": 7.2, "critical": False, "status": "ON"},
-    {"id": "LD-F0-WTR", "name": "RO Water Purifiers & Chillers (Floors 1-3)","zone": "All Floors",              "type": "Appliance",  "floor": 0, "power_kw": 4.2, "critical": False, "status": "ON"},
-    {"id": "LD-F0-FAC", "name": "Exterior Facade & Walkway Lighting",    "zone": "A-Block Perimeter",           "type": "Lighting",   "floor": 0, "power_kw": 3.5, "critical": False, "status": "ON"},
+    # ── COMMON CAMPUS FACILITIES (All Floors) ─────────────────────────────────
+    {"id": "LD-F0-COR", "name": "A-Block Corridors & Stairway Lighting","zone": "All Floors",                "type": "Lighting",   "floor": 0, "power_kw": 4.8, "critical": False, "status": "ON"},
+    {"id": "LD-F0-HVAC","name": "A-Block Central Ventilation & Exhaust","zone": "All Floors",                "type": "HVAC",       "floor": 0, "power_kw": 7.2, "critical": False, "status": "ON"},
+    {"id": "LD-F0-WTR", "name": "RO Water Purifiers & Chillers",        "zone": "All Floors",                "type": "Appliance",  "floor": 0, "power_kw": 4.2, "critical": False, "status": "ON"},
+    {"id": "LD-F0-FAC", "name": "Exterior Facade & Walkway Lighting",   "zone": "A-Block Perimeter",         "type": "Lighting",   "floor": 0, "power_kw": 3.5, "critical": False, "status": "ON"},
 ]
 
 # Mutable state dict keyed by id

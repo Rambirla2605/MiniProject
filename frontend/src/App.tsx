@@ -7,6 +7,7 @@ import LiveMonitoring from './pages/LiveMonitoring';
 import Analytics from './pages/Analytics';
 import AIPrediction from './pages/AIPrediction';
 import LoadManagement from './pages/LoadManagement';
+import OverloadDetection from './pages/OverloadDetection';
 import GlassCard from './components/GlassCard';
 
 /* ─── Tiny page shell ──────────────────────────────────────── */
@@ -179,7 +180,7 @@ function App() {
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/prediction"element={<AIPrediction />} />
             <Route path="/loads"     element={<LoadManagement />} />
-            <Route path="/overload"  element={<Navigate to="/loads" replace />} />
+            <Route path="/overload"  element={<OverloadDetection />} />
             <Route path="/sensors"   element={<SensorsPage />} />
             <Route path="/history"   element={<Navigate to="/analytics" replace />} />
             <Route path="/alerts"    element={<AlertsPage />} />
