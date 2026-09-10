@@ -12,7 +12,7 @@
 // ── ① Change these three values only ────────────────────────────
 const char* WIFI_SSID  = "YOUR_WIFI_NAME";
 const char* WIFI_PASS  = "YOUR_WIFI_PASSWORD";
-const char* SERVER_URL = "https://YOUR-APP-NAME.onrender.com/api/classroom/II-ECE-B/sensor-data";
+const char* SERVER_URL = "https://miniproject-jgox.onrender.com/api/classroom/II-ECE-B/sensor-data";
 // ────────────────────────────────────────────────────────────────
 
 // PZEM-004T connected to ESP32 UART2 (RX=GPIO16, TX=GPIO17)
