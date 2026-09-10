@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
-  X, Zap, Shield, AlertTriangle, Radio, Activity,
-  RefreshCw, Power, CheckCircle2, Copy, Check, Terminal, Cpu
+  X, Zap, Shield, Radio, Activity,
+  RefreshCw, Power, Copy, Check, Terminal, Cpu
 } from 'lucide-react';
 import { postClassroomSensorData, simulateSensorConnection } from '../services/api';
 

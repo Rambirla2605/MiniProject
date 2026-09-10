@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
-  Layers, Zap, Shield, Radio, Activity, Eye,
-  Building2, Cpu, CheckCircle2, ChevronRight, SlidersHorizontal
+  Layers, Shield, Radio,
+  Building2, ChevronRight, SlidersHorizontal
 } from 'lucide-react';
 
 interface AeroBlueprintTwinProps {
@@ -15,7 +15,6 @@ export const AeroBlueprintTwin: React.FC<AeroBlueprintTwinProps> = ({
   loads = [],
   onSelectLoad,
   selectedLoadId,
-  sensorRigStatus,
 }) => {
   const [activeFloor, setActiveFloor] = useState<number | 'all'>('all');
   const [filterType, setFilterType] = useState<string>('ALL');

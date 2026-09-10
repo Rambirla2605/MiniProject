@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
-  Network, Zap, CheckCircle2, RefreshCw, Power, Terminal,
-  Radio, Shield, AlertTriangle, Cpu, Layers, Activity
+  Network, Zap, CheckCircle2, RefreshCw, Terminal,
+  Radio, Activity
 } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import PipelineFlow from '../components/PipelineFlow';
