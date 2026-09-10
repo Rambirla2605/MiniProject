@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://miniproject-jgox.onrender.com/api' : '/api');
+
+export { API_URL };
 
 export const fetchCurrentData = async () => {
   const response = await axios.get(`${API_URL}/current-data`);

@@ -39,7 +39,7 @@ export const LoadTelemetryModal: React.FC<LoadTelemetryModalProps> = ({
     const code = `import requests, time, random
 
 # Endpoint for Classroom II ECE B real sensor telemetry
-URL = "http://localhost:8000/api/classroom/II-ECE-B/sensor-data"
+URL = "https://miniproject-jgox.onrender.com/api/classroom/II-ECE-B/sensor-data"
 
 payload = {
     "voltage": 231.8,       # Measured from AC Voltage Sensor (ZMPT101B / PZEM)
@@ -325,9 +325,9 @@ print("Response:", res.json())`;
             </div>
 
             <pre className="hardware-code-pre">
-{`# 1. Connect Voltage & Current sensors to Raspberry Pi ADC / Serial
+{`# 1. Connect Voltage & Current sensors to ESP32 / Arduino / Raspberry Pi
 # 2. Transmit real-time sensor packets via HTTP POST:
-POST http://localhost:8000/api/classroom/II-ECE-B/sensor-data
+POST https://miniproject-jgox.onrender.com/api/classroom/II-ECE-B/sensor-data
 Content-Type: application/json
 
 {
