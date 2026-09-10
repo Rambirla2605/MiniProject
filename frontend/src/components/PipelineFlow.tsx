@@ -75,14 +75,14 @@ export const PipelineFlow: React.FC<PipelineFlowProps> = ({
             <Radio size={22} className="pulsing-icon" />
           </div>
           <div className="node-text">
-            <span className="node-category">Physical Hardware</span>
-            <h4 className="node-name">IoT Power Sensors</h4>
-            <p className="node-detail">CT Clamps, INA219, PZEM-004T</p>
+            <span className="node-category">Classroom II ECE B</span>
+            <h4 className="node-name">Voltage & Current Sensors</h4>
+            <p className="node-detail">AC Voltage Transducer & CT Clamp</p>
           </div>
           <div className="node-stat-pill">
-            <span>231.4 V</span>
+            <span>230.4 V</span>
             <span className="divider">•</span>
-            <span>50.0 Hz</span>
+            <span>2.35 A</span>
           </div>
           <div className="node-expand-hint">
             {expandedNode === 'sensors' ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -94,7 +94,7 @@ export const PipelineFlow: React.FC<PipelineFlowProps> = ({
         <div className="flow-connector">
           <div className="flow-stream-line" />
           <div className="flow-particle cyan-particle" />
-          <div className="connector-label">I2C / UART</div>
+          <div className="connector-label">ADC / Serial</div>
           <ArrowRight size={16} className="connector-arrow" />
         </div>
 
@@ -144,8 +144,8 @@ export const PipelineFlow: React.FC<PipelineFlowProps> = ({
           </div>
           <div className="node-text">
             <span className="node-category">Virtual Model</span>
-            <h4 className="node-name">Digital Twin Engine</h4>
-            <p className="node-detail">A-Block Grid State & Breakers</p>
+            <h4 className="node-name">A-Block Digital Twin</h4>
+            <p className="node-detail">4-Floor Multi-Room Circuit Model</p>
           </div>
           <div className="node-stat-pill">
             <span className="text-white font-bold">{currentPower} kW</span>
@@ -162,7 +162,7 @@ export const PipelineFlow: React.FC<PipelineFlowProps> = ({
         <div className="flow-connector">
           <div className="flow-stream-line" />
           <div className="flow-particle amber-particle" />
-          <div className="connector-label">Lag Matrix</div>
+          <div className="connector-label">Feature Matrix</div>
           <ArrowRight size={16} className="connector-arrow" />
         </div>
 
@@ -177,9 +177,9 @@ export const PipelineFlow: React.FC<PipelineFlowProps> = ({
             <BrainCircuit size={22} />
           </div>
           <div className="node-text">
-            <span className="node-category">Predictive Intelligence</span>
-            <h4 className="node-name">Random Forest ML</h4>
-            <p className="node-detail">Peak Detection & Time Horizon</p>
+            <span className="node-category">5-Year Trained ML</span>
+            <h4 className="node-name">Peak Load Forecast</h4>
+            <p className="node-detail">Predicts When & Where Peak Occurs</p>
           </div>
           <div className="node-stat-pill">
             <span className={isOverload ? 'text-rose font-bold' : 'text-emerald font-bold'}>
@@ -198,7 +198,7 @@ export const PipelineFlow: React.FC<PipelineFlowProps> = ({
         <div className="flow-connector">
           <div className="flow-stream-line" />
           <div className="flow-particle green-particle" />
-          <div className="connector-label">Actuation</div>
+          <div className="connector-label">Advisory</div>
           <ArrowRight size={16} className="connector-arrow" />
         </div>
 
@@ -213,13 +213,13 @@ export const PipelineFlow: React.FC<PipelineFlowProps> = ({
             <Zap size={22} />
           </div>
           <div className="node-text">
-            <span className="node-category">Feedback Loop</span>
-            <h4 className="node-name">Load Shed & Re-Predict</h4>
-            <p className="node-detail">Auto Re-calculation on Breaker Trip</p>
+            <span className="node-category">Operator Action</span>
+            <h4 className="node-name">Non-Critical Shedding</h4>
+            <p className="node-detail">AI Suggests · Operator Confirms</p>
           </div>
           <div className="node-stat-pill">
             <CheckCircle2 size={13} className="text-emerald" />
-            <span className="text-emerald font-medium">Safe Re-Forecast</span>
+            <span className="text-emerald font-medium">Critical Loads Safe</span>
           </div>
           <div className="node-expand-hint">
             {expandedNode === 'actuation' ? <ChevronUp size={14} /> : <ChevronDown size={14} />}

@@ -42,8 +42,22 @@ export const shedAllLoads = async () => {
   return response.data;
 };
 
+export const fetchSingleLoad = async (loadId: string) => {
+  const response = await axios.get(`${API_URL}/loads/${loadId}`);
+  return response.data;
+};
+
+export const postClassroomSensorData = async (payload: any) => {
+  const response = await axios.post(`${API_URL}/classroom/II-ECE-B/sensor-data`, payload);
+  return response.data;
+};
+
+export const simulateSensorConnection = async (enable: boolean) => {
+  const response = await axios.post(`${API_URL}/classroom/II-ECE-B/simulate-sensor`, { enable });
+  return response.data;
+};
+
 export const restoreAllLoads = async () => {
   const response = await axios.post(`${API_URL}/loads/restore-all`);
   return response.data;
 };
-
