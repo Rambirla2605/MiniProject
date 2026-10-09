@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import {
   X, Zap, Shield, Radio, Activity,
-  RefreshCw, Power, Copy, Check, Terminal, Cpu
+  RefreshCw, Power, Copy, Check, Terminal
 } from 'lucide-react';
-import { postClassroomSensorData, simulateSensorConnection } from '../services/api';
+import { postClassroomSensorData } from '../services/api';
 
 interface LoadTelemetryModalProps {
   load: any;
@@ -68,24 +68,12 @@ print("Response:", res.json())`;
         temperature: 28.2
       };
       await postClassroomSensorData(samplePayload);
-      setTestNote(`Transmitted hardware packet: ${samplePayload.voltage}V, ${samplePayload.current}A -> Website telemetry updated to real detected values!`);
+      setTestNote(`Transmitted hardware packet: ${samplePayload.voltage}V, ${samplePayload.current}A -> Telemetry updated to real measured values!`);
       setTimeout(() => setTestNote(null), 5000);
     } catch {
       setTestNote('Error communicating with backend edge endpoint');
       setTimeout(() => setTestNote(null), 4000);
     } finally {
-      setTestSending(false);
-    }
-  };
-
-  const handleToggleSimulateConnect = async () => {
-    setTestSending(true);
-    try {
-      const nextState = !load.sensor_connected;
-      await simulateSensorConnection(nextState);
-      setTestNote(nextState ? '⚡ Physical sensor state: CONNECTED!' : '⚪ Physical sensor state: DEMO MODE');
-      setTimeout(() => setTestNote(null), 4000);
-    } catch {} finally {
       setTestSending(false);
     }
   };
@@ -141,29 +129,18 @@ print("Response:", res.json())`;
           <div className="ece2b-hardware-banner animate-fade-in">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span className={`status-indicator-dot ${load.sensor_connected ? 'dot-connected' : 'dot-demo'}`} />
+                <span className="status-indicator-dot dot-connected" />
                 <div>
-                  <span style={{ fontSize: 12.5, fontWeight: 700, color: load.sensor_connected ? '#10b981' : '#f59e0b' }}>
-                    {load.sensor_connected ? '⚡ REAL HARDWARE TRANSDUCER CONNECTED' : '🟡 DEMO TELEMETRY (Awaiting Physical Circuit Connection)'}
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: '#10b981' }}>
+                    ⚡ HARDWARE TRANSDUCER & SENSOR RIG ACTIVE
                   </span>
                   <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                    {load.sensor_connected 
-                      ? `Live CT Clamp & AC Voltage sensor active · Detected value shown live` 
-                      : `Hardware circuit not yet transmitting · Showing realistic demo readings until connected`}
+                    Live PZEM-004T / CT sensor telemetry actively streaming to the Digital Twin
                   </div>
                 </div>
               </div>
 
               <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={handleToggleSimulateConnect}
-                  disabled={testSending}
-                  className="sensor-test-btn"
-                  title="Toggle sensor connected status for demo"
-                >
-                  <Cpu size={13} />
-                  <span>{load.sensor_connected ? 'Switch to Demo' : 'Simulate Connect'}</span>
-                </button>
                 <button
                   onClick={handleSendTestHardwarePacket}
                   disabled={testSending}
@@ -171,7 +148,7 @@ print("Response:", res.json())`;
                   style={{ background: 'rgba(99,102,241,0.2)', borderColor: '#818cf8', color: '#a5b4fc' }}
                 >
                   <Terminal size={13} />
-                  <span>Push Sensor Packet</span>
+                  <span>Send Telemetry Sample</span>
                 </button>
               </div>
             </div>

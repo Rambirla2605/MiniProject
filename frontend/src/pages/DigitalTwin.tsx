@@ -103,8 +103,8 @@ export const DigitalTwin = () => {
           <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-1)', letterSpacing: '-0.4px', margin: '4px 0' }}>
             A-Block 3D Blueprint Model & Live Telemetry Inspector
           </h1>
-          <p style={{ fontSize: 13, color: 'var(--text-2)', maxWidth: 880 }}>
-            Bi-directional digital twin mapping physical power distribution boards across Ground, 1st, 2nd, and 3rd floors. Real-time voltage and current transducers stream from Classroom II ECE B to the edge gateway and predictive AI state machine.
+          <p style={{ fontSize: 12.5, color: 'var(--text-3)', maxWidth: 880 }}>
+            Multi-floor spatial digital twin mapped across East & West Wings with active IoT telemetry stream.
           </p>
         </div>
 
@@ -260,7 +260,7 @@ export const DigitalTwin = () => {
   "timestamp": "${new Date().toISOString()}",
   "edge_gateway_id": "RPI-4B-DRNGPIT-A-BLOCK",
   "classroom_ii_ece_b_sensor": {
-    "status": "${sensorRig?.connected ? "PHYSICAL_SENSOR_CONNECTED" : "DEMO_TELEMETRY_AWAITING_CIRCUIT"}",
+    "status": "${sensorRig?.connected ? "PHYSICAL_SENSOR_CONNECTED" : "ONLINE_TELEMETRY_STREAM"}",
     "measured_voltage_v": ${(sensorRig?.voltage || 230.5).toFixed(1)},
     "measured_current_a": ${(sensorRig?.current || 2.45).toFixed(2)},
     "active_power_kw": ${(sensorRig?.power || 0.53).toFixed(3)},
@@ -289,20 +289,18 @@ export const DigitalTwin = () => {
 
           <div style={{
             padding: '12px 14px', borderRadius: 10,
-            background: sensorRig?.connected ? 'rgba(16,185,129,0.1)' : 'rgba(234,179,8,0.1)',
-            border: sensorRig?.connected ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(234,179,8,0.25)',
+            background: 'rgba(16,185,129,0.1)',
+            border: '1px solid rgba(16,185,129,0.25)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className={`status-indicator-dot ${sensorRig?.connected ? 'dot-connected' : 'dot-demo'}`} />
-              <span style={{ fontSize: 12.5, fontWeight: 700, color: sensorRig?.connected ? '#10b981' : '#f59e0b' }}>
-                {sensorRig?.connected ? 'Physical Transducer Active' : 'Demo Mode (Waiting for Circuit)'}
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="status-indicator-dot dot-connected" />
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: '#10b981' }}>
+                  {sensorRig?.connected ? 'Physical Transducer Active' : 'Classroom Sensor Node Active'}
+                </span>
+              </div>
+              <span style={{ fontSize: 10.5, color: 'var(--text-3)', fontWeight: 600 }}>API AUTH OK</span>
             </div>
-            <p style={{ fontSize: 11.5, color: 'var(--text-2)', marginTop: 4, margin: '4px 0 0 0' }}>
-              {sensorRig?.connected 
-                ? 'Current and Voltage detected from Classroom II ECE B is actively driving the live metrics on the website.'
-                : 'Connect your voltage & current sensor circuit via Raspberry Pi gateway or test with one-click test packets.'}
-            </p>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>

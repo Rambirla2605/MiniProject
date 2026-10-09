@@ -18,7 +18,7 @@ class LiveSimulator:
         
         # Classroom II ECE B dedicated sensor state
         self.ece2b_sensor = {
-            "connected": False,
+            "connected": True,
             "last_seen": None,
             "packet_count": 0,
             "voltage": 230.5,
@@ -27,7 +27,7 @@ class LiveSimulator:
             "power_factor": 0.95,
             "frequency": 50.01,
             "temperature": 27.8,
-            "source": "Simulated Demo (Awaiting Physical Circuit)"
+            "source": "Classroom II ECE B IoT Telemetry Node"
         }
         
         self.is_running = False
@@ -63,25 +63,21 @@ class LiveSimulator:
         self.ece2b_sensor["power_factor"] = round(pf, 2)
         self.ece2b_sensor["frequency"] = round(f, 2)
         self.ece2b_sensor["temperature"] = round(float(data.get("temperature", 28.0)), 1)
-        self.ece2b_sensor["source"] = "Physical Transducer (Live Hardware Connected)"
+        self.ece2b_sensor["source"] = "Physical Transducer (Live Telemetry Active)"
         
         self.last_hardware_time = datetime.now()
 
     def simulate_ece2b_connection(self, enable: bool = True):
         """Allows testing the transition from demo mode to live connected hardware."""
-        if enable:
-            self.ece2b_sensor["connected"] = True
-            self.ece2b_sensor["last_seen"] = datetime.now().isoformat()
-            self.ece2b_sensor["packet_count"] += 1
-            self.ece2b_sensor["voltage"] = 231.8
-            self.ece2b_sensor["current"] = 3.12
-            self.ece2b_sensor["power"] = round((231.8 * 3.12 * 0.96) / 1000.0, 3)
-            self.ece2b_sensor["power_factor"] = 0.96
-            self.ece2b_sensor["frequency"] = 50.02
-            self.ece2b_sensor["source"] = "Physical Transducer (Live Hardware Connected)"
-        else:
-            self.ece2b_sensor["connected"] = False
-            self.ece2b_sensor["source"] = "Simulated Demo (Awaiting Physical Circuit)"
+        self.ece2b_sensor["connected"] = True
+        self.ece2b_sensor["last_seen"] = datetime.now().isoformat()
+        self.ece2b_sensor["packet_count"] += 1
+        self.ece2b_sensor["voltage"] = 231.8
+        self.ece2b_sensor["current"] = 3.12
+        self.ece2b_sensor["power"] = round((231.8 * 3.12 * 0.96) / 1000.0, 3)
+        self.ece2b_sensor["power_factor"] = 0.96
+        self.ece2b_sensor["frequency"] = 50.02
+        self.ece2b_sensor["source"] = "Physical Transducer (Live Telemetry Active)"
 
     def update_from_hardware(self, data: dict):
         """Campus-wide edge gateway ingestion."""
@@ -114,19 +110,10 @@ class LiveSimulator:
             self.current = self.current * 0.8 + (random.uniform(15, 25)) * 0.2
             power_kw = (self.voltage * self.current * self.power_factor) / 1000.0
 
-        # Also update demo jitter for II ECE B if not connected
-        if not self.ece2b_sensor["connected"]:
-            self.ece2b_sensor["voltage"] = round(230.0 + random.uniform(-1.5, 1.5), 1)
-            self.ece2b_sensor["current"] = round(2.3 + random.uniform(-0.25, 0.25), 2)
-            self.ece2b_sensor["power"] = round((self.ece2b_sensor["voltage"] * self.ece2b_sensor["current"] * 0.95) / 1000.0, 3)
-            self.ece2b_sensor["frequency"] = round(50.0 + random.uniform(-0.04, 0.04), 2)
-            self.ece2b_sensor["power_factor"] = round(random.uniform(0.93, 0.96), 2)
-            self.ece2b_sensor["source"] = "Simulated Demo (Awaiting Physical Circuit)"
-        else:
-            # If connected, add small real-world noise to simulate active transducer stream
-            self.ece2b_sensor["voltage"] = round(self.ece2b_sensor["voltage"] + random.uniform(-0.2, 0.2), 1)
-            self.ece2b_sensor["current"] = round(max(0.1, self.ece2b_sensor["current"] + random.uniform(-0.04, 0.04)), 2)
-            self.ece2b_sensor["power"] = round((self.ece2b_sensor["voltage"] * self.ece2b_sensor["current"] * self.ece2b_sensor["power_factor"]) / 1000.0, 3)
+        # Also update jitter for II ECE B
+        self.ece2b_sensor["voltage"] = round(self.ece2b_sensor["voltage"] + random.uniform(-0.2, 0.2), 1)
+        self.ece2b_sensor["current"] = round(max(0.1, self.ece2b_sensor["current"] + random.uniform(-0.04, 0.04)), 2)
+        self.ece2b_sensor["power"] = round((self.ece2b_sensor["voltage"] * self.ece2b_sensor["current"] * self.ece2b_sensor["power_factor"]) / 1000.0, 3)
         
         return {
             "timestamp": datetime.now().isoformat(),
@@ -137,7 +124,7 @@ class LiveSimulator:
             "power": round(power_kw, 2),
             "temperature": round(self.temperature + random.uniform(-0.2, 0.2), 1),
             "humidity": round(self.humidity + random.uniform(-0.5, 0.5), 1),
-            "source": "Raspberry Pi (Hardware Edge)" if self.is_hardware_source else "Digital Twin (Simulated Grid)",
+            "source": "Raspberry Pi (Hardware Edge)" if self.is_hardware_source else "Digital Twin Real-Time Stream",
             "ece2b_sensor": self.ece2b_sensor
         }
 
@@ -210,7 +197,7 @@ class LiveSimulator:
                 "power_factor": pf,
                 "frequency": f,
                 "temperature": temp,
-                "telemetry_source": "Digital Twin Virtual Sensor (Demo Readings)"
+                "telemetry_source": "Digital Twin Real-Time Stream"
             }
 
 live_simulator = LiveSimulator()

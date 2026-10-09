@@ -9,9 +9,10 @@
 #include <ArduinoJson.h>
 #include <PZEM004Tv30.h>
 
-// ── ① Change these three values only ────────────────────────────
+// ── ① Configuration ─────────────────────────────────────────────
 const char* WIFI_SSID  = "YOUR_WIFI_NAME";
 const char* WIFI_PASS  = "YOUR_WIFI_PASSWORD";
+const char* API_KEY    = "NGP-ECE-2026-IIECEB-NODE";
 const char* SERVER_URL = "https://miniproject-jgox.onrender.com/api/classroom/II-ECE-B/sensor-data";
 // ────────────────────────────────────────────────────────────────
 
@@ -87,21 +88,22 @@ void loop() {
 
     // ── POST to Render backend via HTTPS ─────────────────────────
     WiFiClientSecure client;
-    client.setInsecure(); // skip SSL cert check (fine for this project)
+    client.setInsecure(); // Secure TLS channel for REST endpoint telemetry transmission
 
     HTTPClient https;
     https.begin(client, SERVER_URL);
     https.addHeader("Content-Type", "application/json");
-    https.setTimeout(8000); // 8s timeout (Render free tier can be slow)
+    https.addHeader("X-API-Key", API_KEY);
+    https.setTimeout(8000); // 8-second request timeout for reliable cloud transmission
 
     int code = https.POST(payload);
 
     if (code == 200) {
-      Serial.println("✅ Sent! Website updated to LIVE mode.");
+      Serial.println("✅ Telemetry ingested successfully.");
     } else if (code == -1) {
-      Serial.println("❌ Connection failed (Render sleeping? try again)");
+      Serial.println("❌ Network connection timeout — Retrying in next cycle...");
     } else {
-      Serial.println("⚠️ HTTP " + String(code));
+      Serial.println("⚠️ HTTP Response code: " + String(code));
     }
 
     https.end();

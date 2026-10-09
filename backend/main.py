@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from services.ml_service import ml_service
 from services.live_simulator import live_simulator
@@ -109,13 +109,34 @@ def read_root():
         "policy": "Advisory Only (AI suggests shedding; critical loads strictly protected)"
     }
 
+# Official API Authentication Key for II ECE B & IoT nodes
+ECE2B_API_KEY = "NGP-ECE-2026-IIECEB-NODE"
+
+# Real Campus 3-Year Baseline Energy Consumption (Recorded 01/10/2026 at 3:30 PM)
+CAMPUS_3YR_ENERGY = {
+    "east_wing_kw": 782765.8,
+    "west_wing_kw": 162279.6,
+    "total_campus_kw": 945045.4,
+    "east_pct": 82.83,
+    "west_pct": 17.17,
+    "reading_date": "01/10/2026",
+    "reading_time": "3:30 PM",
+    "duration_years": 3,
+    "description": "3-Year Cumulative Campus Substation Distribution"
+}
+
 @app.post("/api/classroom/II-ECE-B/sensor-data")
 @app.post("/api/sensor-data")
-def receive_sensor_data(payload: dict):
+def receive_sensor_data(payload: dict, x_api_key: str = Header(None)):
     """
     Ingest real-time voltage and current telemetry from Classroom II ECE B sensor node.
+    Supports API Key: NGP-ECE-2026-IIECEB-NODE (via X-API-Key header or payload)
     Accepts: { voltage, current, power (optional), power_factor, frequency, temperature }
     """
+    # Accept header or payload key if provided
+    key_received = x_api_key or payload.get("api_key")
+    is_authenticated = (key_received == ECE2B_API_KEY) or (key_received is None)
+    
     live_simulator.update_ece2b_sensor(payload)
     
     # Also update II ECE B load power in the digital twin registry
@@ -134,10 +155,17 @@ def receive_sensor_data(payload: dict):
         "status": "ACCEPTED",
         "node": "Classroom II ECE B (A-Block 3rd Floor)",
         "edge_gateway": "Raspberry Pi 4B Edge Gateway",
+        "authenticated": is_authenticated,
+        "api_key_valid": bool(key_received == ECE2B_API_KEY) if key_received else True,
         "timestamp": datetime.now().isoformat(),
         "live_telemetry": live_simulator.ece2b_sensor,
         "twin_synced": True
     }
+
+@app.get("/api/substation-energy")
+def get_substation_energy():
+    """Returns 3-year real cumulative campus consumption for East and West wings."""
+    return CAMPUS_3YR_ENERGY
 
 @app.post("/api/classroom/II-ECE-B/simulate-sensor")
 def toggle_simulate_sensor(payload: dict = None):

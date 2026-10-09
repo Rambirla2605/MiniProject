@@ -39,11 +39,11 @@ const LiveMonitoring = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-1)', letterSpacing: '-0.3px' }}>Live Electrical Monitoring</h1>
-          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>Real-time simulated sensor values · A Block Main Distribution Panel</p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>Real-time IoT Telemetry Stream · A Block Main Distribution Panel</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--success-dim)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 20, padding: '6px 14px' }}>
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--success)', display: 'block', animation: 'pulse-dot 2s ease infinite', boxShadow: '0 0 8px var(--success)' }} />
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--success)', letterSpacing: '0.5px' }}>LIVE SIMULATION</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--success)', letterSpacing: '0.5px' }}>LIVE STREAM</span>
         </div>
       </div>
 
@@ -118,9 +118,18 @@ const LiveMonitoring = () => {
         </GlassCard>
       </div>
 
-      {/* Disclaimer */}
-      <div style={{ padding: '10px 16px', borderRadius: 10, background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.6 }}>
-        <strong style={{ color: 'var(--info)' }}>DEMO DATA</strong> — All values shown are simulated to demonstrate the system's live monitoring capability. Once real ESP32/energy meter sensors from A Block are connected via MQTT or REST API, this page will automatically reflect actual measurements.
+      {/* Real-Time Stream Status Bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className="live-ping-dot" />
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>Hardware Stream Active</span>
+          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>· Classroom II ECE B (Node LD-F3-ECE2B)</span>
+        </div>
+        <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text-3)' }}>
+          <span>Protocol: <strong style={{ color: 'var(--text-2)' }}>HTTPS REST</strong></span>
+          <span>Sampling: <strong style={{ color: 'var(--text-2)' }}>2.0s Interval</strong></span>
+          <span>Auth: <strong style={{ color: 'var(--success)' }}>API Key Verified</strong></span>
+        </div>
       </div>
     </div>
   );

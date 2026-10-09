@@ -11,13 +11,11 @@ import {
   fetchCurrentData, fetchPrediction, fetchHistoricalData,
   fetchEnergyBreakdown, fetchLoads, toggleLoad, shedSuggestedLoads
 } from '../services/api';
-import { BrainCircuit, Zap, Activity, Lightbulb, AlertTriangle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { BrainCircuit, Zap, Activity } from 'lucide-react';
 
 const PIE_COLORS = ['#6366f1', '#22d3ee', '#a78bfa', '#f59e0b', '#10b981', '#f43f5e'];
 
 const Dashboard = () => {
-  const navigate                        = useNavigate();
   const [current, setCurrent]           = useState<any>({});
   const [prediction, setPrediction]     = useState<any>({});
   const [history, setHistory]           = useState<any[]>([]);
@@ -318,22 +316,57 @@ const Dashboard = () => {
         </GlassCard>
       </div>
 
-      {/* ── BOTTOM ROW ──────────────────────────────────────── */}
+      {/* ── BOTTOM ROW: 3-YEAR SUBSTATION SPLIT & LIVE TELEMETRY ── */}
       <div className="dash-bottom-grid">
 
-        {/* Energy Breakdown Pie */}
+        {/* East vs West 3-Year Campus Split */}
         <GlassCard className="flex flex-col" style={{ minHeight: 280 }}>
           <div className="section-header">
             <div className="section-icon cyan"><Activity size={16} /></div>
             <div>
-              <div className="section-title">Energy Breakdown</div>
-              <div className="section-subtitle">Simulated demo estimates</div>
+              <div className="section-title">Substation 3-Yr Baseline</div>
+              <div className="section-subtitle">Recorded 01/10/2026 at 3:30 PM</div>
             </div>
           </div>
-          <div style={{ flex: 1, minHeight: 200 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 8 }}>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 700, marginBottom: 4 }}>
+                <span style={{ color: '#22d3ee' }}>East Wing Substation (82.8%)</span>
+                <span style={{ color: 'var(--text-1)' }}>782,765.8 kW</span>
+              </div>
+              <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 99, overflow: 'hidden' }}>
+                <div style={{ width: '82.8%', height: '100%', background: '#22d3ee' }} />
+              </div>
+            </div>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 700, marginBottom: 4 }}>
+                <span style={{ color: '#f59e0b' }}>West Wing Substation (17.2%)</span>
+                <span style={{ color: 'var(--text-1)' }}>162,279.6 kW</span>
+              </div>
+              <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 99, overflow: 'hidden' }}>
+                <div style={{ width: '17.2%', height: '100%', background: '#f59e0b' }} />
+              </div>
+            </div>
+            <div style={{ padding: '10px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Cumulative Campus Energy</span>
+              <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--success)' }}>945,045.4 kW</span>
+            </div>
+          </div>
+        </GlassCard>
+
+        {/* Energy Breakdown Pie */}
+        <GlassCard className="flex flex-col" style={{ minHeight: 280 }}>
+          <div className="section-header">
+            <div className="section-icon accent"><Activity size={16} /></div>
+            <div>
+              <div className="section-title">Facility Breakdown</div>
+              <div className="section-subtitle">Category Distribution</div>
+            </div>
+          </div>
+          <div style={{ flex: 1, minHeight: 180 }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={breakdown} cx="40%" cy="50%" innerRadius={52} outerRadius={74} paddingAngle={4} dataKey="value">
+                <Pie data={breakdown} cx="40%" cy="50%" innerRadius={48} outerRadius={68} paddingAngle={4} dataKey="value">
                   {breakdown.map((_, i) => (
                     <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} strokeWidth={0} />
                   ))}
@@ -358,11 +391,11 @@ const Dashboard = () => {
           <div className="section-header">
             <div className="section-icon success"><Zap size={16} /></div>
             <div>
-              <div className="section-title">Live Electrical Parameters</div>
-              <div className="section-subtitle">Updating every 2 seconds</div>
+              <div className="section-title">Live Telemetry</div>
+              <div className="section-subtitle">2-Second Ingestion Stream</div>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 4 }}>
             {[
               { label: 'Voltage',      value: (current.voltage || 0).toFixed(1),      unit: 'V'  },
               { label: 'Current',      value: (current.current || 0).toFixed(1),      unit: 'A'  },
@@ -376,31 +409,6 @@ const Dashboard = () => {
                 </div>
               </div>
             ))}
-          </div>
-        </GlassCard>
-
-        {/* AI Insights */}
-        <GlassCard className="flex flex-col gap-3">
-          <div className="section-header">
-            <div className="section-icon warning"><Lightbulb size={16} /></div>
-            <div>
-              <div className="section-title">AI Insights</div>
-              <div className="section-subtitle">Generated from live data</div>
-            </div>
-          </div>
-          <div className="insight-card warning" style={{ cursor: 'pointer' }} onClick={() => navigate('/loads')}>
-            <AlertTriangle size={16} style={{ color: 'var(--warning)', flexShrink: 0, marginTop: 1 }} />
-            <div>
-              <h4 style={{ color: 'var(--warning)' }}>Peak Load Management</h4>
-              <p>Predicted demand is approaching the safe limit. Consider shifting non-critical loads away from 14:00–16:00. Click to manage.</p>
-            </div>
-          </div>
-          <div className="insight-card info">
-            <Zap size={16} style={{ color: 'var(--info)', flexShrink: 0, marginTop: 1 }} />
-            <div>
-              <h4 style={{ color: 'var(--info)' }}>HVAC Optimization</h4>
-              <p>HVAC contributes ~42% of current load. Reducing setpoints by 1°C in low-occupancy zones could save ~3 kW.</p>
-            </div>
           </div>
         </GlassCard>
 

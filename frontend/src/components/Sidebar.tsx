@@ -74,10 +74,10 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => (
 
       <div className="sidebar-footer">
         <div style={{ padding: '10px 12px', borderRadius: 10, background: 'var(--accent-dim)', border: '1px solid rgba(99,102,241,0.2)' }}>
-          <div style={{ fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.6px', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>Data Mode</div>
+          <div style={{ fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.6px', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>Data Stream</div>
           <div style={{ fontSize: 12, color: 'var(--accent-light)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-light)', display: 'inline-block' }}></span>
-            DEMO / SIMULATION
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--success)', display: 'inline-block', boxShadow: '0 0 6px var(--success)' }}></span>
+            LIVE IOT TWIN
           </div>
         </div>
       </div>

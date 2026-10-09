@@ -50,7 +50,14 @@ export const fetchSingleLoad = async (loadId: string) => {
 };
 
 export const postClassroomSensorData = async (payload: any) => {
-  const response = await axios.post(`${API_URL}/classroom/II-ECE-B/sensor-data`, payload);
+  const response = await axios.post(`${API_URL}/classroom/II-ECE-B/sensor-data`, payload, {
+    headers: { 'X-API-Key': 'NGP-ECE-2026-IIECEB-NODE' }
+  });
+  return response.data;
+};
+
+export const fetchSubstationEnergy = async () => {
+  const response = await axios.get(`${API_URL}/substation-energy`);
   return response.data;
 };
 

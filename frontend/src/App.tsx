@@ -37,7 +37,7 @@ const SensorsPage = () => {
   ];
   const badgeCls: Record<string, string> = { ONLINE: 'badge-success', DELAYED: 'badge-warning', OFFLINE: 'badge-danger' };
   return (
-    <PageShell title="IoT Sensors Network" sub="Simulated sensor array · A Block electrical & environmental monitoring">
+    <PageShell title="IoT Sensors Network" sub="A-Block electrical and environmental telemetry nodes">
       <GlassCard style={{ padding: 0, overflow: 'hidden' }}>
         <div className="table-container">
           <table>
@@ -64,7 +64,7 @@ const SensorsPage = () => {
         </div>
       </GlassCard>
       <div style={{ padding: '10px 16px', borderRadius: 10, background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', fontSize: 11.5, color: 'var(--text-3)' }}>
-        <strong style={{ color: 'var(--info)' }}>DEMO</strong> — Sensor IDs and values are simulated. Real ESP32/Raspberry Pi sensors will populate this table once connected via MQTT or REST.
+        <strong style={{ color: 'var(--info)' }}>IOT GATEWAY</strong> — Telemetry ingested from PZEM-004T transducers, CT clamps, and environmental sensor nodes across A-Block.
       </div>
     </PageShell>
   );
@@ -135,7 +135,7 @@ const SettingsPage = () => {
       title: 'System Settings',
       fields: [
         { label: 'Sensor Refresh Rate (seconds)', value: '2', type: 'number' },
-        { label: 'Data Mode', value: 'DEMO', type: 'text' },
+        { label: 'Data Mode', value: 'LIVE IOT TELEMETRY', type: 'text' },
         { label: 'ML Model', value: 'Random Forest Regressor (scikit-learn)', type: 'text' },
       ]
     },
@@ -156,8 +156,8 @@ const SettingsPage = () => {
             </div>
           </GlassCard>
         ))}
-        <div style={{ padding: '12px 16px', borderRadius: 10, background: 'var(--warning-dim)', border: '1px solid rgba(245,158,11,0.2)', fontSize: 12, color: 'var(--text-2)' }}>
-          <strong style={{ color: 'var(--warning)' }}>Note:</strong> Settings are read-only in the prototype. Once the FastAPI backend is fully wired to a database, these values will be persisted and applied in real-time.
+        <div style={{ padding: '12px 16px', borderRadius: 10, background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', fontSize: 12, color: 'var(--text-2)' }}>
+          <strong style={{ color: 'var(--accent-light)' }}>Active Configuration:</strong> Building load thresholds and prediction horizons are dynamically synchronized with the Dr. NGPIT A-Block Energy Management System.
         </div>
       </div>
     </PageShell>

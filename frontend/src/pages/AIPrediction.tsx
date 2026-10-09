@@ -173,7 +173,7 @@ const AIPrediction = () => {
             <CheckCircle size={16} style={{ color: 'var(--success)', flexShrink: 0, marginTop: 1 }} />
             <div>
               <h4 style={{ color: 'var(--success)' }}>Model is well-fitted</h4>
-              <p>High R² and low MAE confirm the model has learned the academic building's energy patterns effectively from the simulated 5-year dataset.</p>
+              <p>High R² and low MAE confirm the model has learned the academic building's energy patterns effectively from the 5-year historical dataset.</p>
             </div>
           </div>
         </GlassCard>

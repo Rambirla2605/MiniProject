@@ -40,7 +40,7 @@ export const PipelineFlow: React.FC<PipelineFlowProps> = ({
             Hardware ➔ Digital Twin ➔ AI Decision Pipeline
           </h2>
           <p className="pipeline-subtitle">
-            Real-time physical sensor stream feeds Raspberry Pi edge nodes, updating the A-Block Digital Twin model to run predictive ML inferencing.
+            Real-time IoT telemetry ingested into A-Block Digital Twin model with live predictive ML inferencing.
           </p>
         </div>
 
