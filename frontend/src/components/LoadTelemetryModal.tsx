@@ -162,7 +162,7 @@ print("Response:", res.json())`;
         ) : (
           <div style={{ padding: '8px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', fontSize: 11.5, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <Activity size={14} className="text-cyan" />
-            <span>Digital Twin Virtual Telemetry · Live estimated metrics computed based on real-time grid conditions</span>
+            <span>Digital Twin Substation Feed · Real-time electrical telemetry synchronized with A-Block distribution panel</span>
           </div>
         )}
 

@@ -36,9 +36,9 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
             <span className="status-dot pulse" />
             ONLINE
           </div>
-          <div className="status-pill demo">
-            <span className="status-dot" />
-            LIVE TWIN
+          <div className="status-pill online">
+            <span className="status-dot pulse" />
+            TELEMETRY ACTIVE
           </div>
         </div>
 
