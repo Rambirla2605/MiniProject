@@ -65,7 +65,12 @@ class LiveSimulator:
         self.ece2b_sensor["temperature"] = round(float(data.get("temperature", 28.0)), 1)
         self.ece2b_sensor["source"] = "Physical Transducer (Live Telemetry Active)"
         
+        # Also sync campus grid voltage feed
+        self.voltage = round(v, 2)
+        self.power_factor = round(pf, 2)
+        self.frequency = round(f, 2)
         self.last_hardware_time = datetime.now()
+        self.current_state = self._generate_state()
 
     def simulate_ece2b_connection(self, enable: bool = True):
         """Allows testing the transition from demo mode to live connected hardware."""
