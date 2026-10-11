@@ -3,7 +3,7 @@ import {
   X, Zap, Shield, Radio, Activity,
   RefreshCw, Power, Copy, Check, Terminal
 } from 'lucide-react';
-import { postClassroomSensorData } from '../services/api';
+import { postClassroomSensorData, setClassroomRealMode } from '../services/api';
 
 interface LoadTelemetryModalProps {
   load: any;
@@ -21,6 +21,8 @@ export const LoadTelemetryModal: React.FC<LoadTelemetryModalProps> = ({
   const [copied, setCopied] = useState(false);
   const [testSending, setTestSending] = useState(false);
   const [testNote, setTestNote] = useState<string | null>(null);
+  const [realMode, setRealMode] = useState<boolean>(load?.real_mode ?? false);
+  const [realModeToggling, setRealModeToggling] = useState(false);
 
   if (!load) return null;
 
@@ -141,6 +143,45 @@ print("Response:", res.json())`;
               </div>
 
               <div style={{ display: 'flex', gap: 8 }}>
+                {/* Real Sensor Mode Toggle */}
+                <button
+                  id="ece2b-real-mode-toggle-modal"
+                  onClick={async () => {
+                    setRealModeToggling(true);
+                    try {
+                      const res = await setClassroomRealMode(!realMode);
+                      setRealMode(res.real_mode ?? !realMode);
+                      const connected = res.telemetry?.connected ?? false;
+                      setTestNote(
+                        res.real_mode
+                          ? connected
+                            ? 'Real Sensor Mode ON — showing live physical values'
+                            : 'Real Sensor Mode ON — sensor offline, showing 0 V / 0 A'
+                          : 'Real Sensor Mode OFF — showing simulated baseline'
+                      );
+                      setTimeout(() => setTestNote(null), 4000);
+                    } catch {
+                      setTestNote('Error toggling real sensor mode');
+                      setTimeout(() => setTestNote(null), 3000);
+                    } finally {
+                      setRealModeToggling(false);
+                    }
+                  }}
+                  disabled={realModeToggling}
+                  className="sensor-test-btn"
+                  style={{
+                    background: realMode ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.04)',
+                    borderColor: realMode ? '#10b981' : 'rgba(255,255,255,0.15)',
+                    color: realMode ? '#10b981' : 'var(--text-3)'
+                  }}
+                >
+                  <span style={{
+                    width: 7, height: 7, borderRadius: '50%', display: 'inline-block',
+                    background: realMode ? '#10b981' : '#64748b',
+                    boxShadow: realMode ? '0 0 5px #10b981' : 'none'
+                  }} />
+                  <span>{realModeToggling ? 'Switching...' : realMode ? 'Real ON' : 'Real OFF'}</span>
+                </button>
                 <button
                   onClick={handleSendTestHardwarePacket}
                   disabled={testSending}

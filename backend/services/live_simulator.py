@@ -17,22 +17,93 @@ class LiveSimulator:
         self.is_hardware_source = False
         
         # Classroom II ECE B dedicated sensor state
-        self.ece2b_sensor = {
-            "connected": True,
-            "last_seen": None,
-            "packet_count": 0,
-            "voltage": 230.5,
-            "current": 2.45,
-            "power": 0.53,
-            "power_factor": 0.95,
-            "frequency": 50.01,
+        # ece2b_real_mode: when True, shows real hardware values if connected, else strictly 0
+        self.ece2b_real_mode = False
+        self.last_ece2b_packet_time = None
+        
+        self.sim_ece2b_voltage = 230.5
+        self.sim_ece2b_current = 2.45
+        self.sim_ece2b_power = 0.53
+        
+        self.real_hardware_reading = {
+            "voltage": 0.0,
+            "current": 0.0,
+            "power": 0.0,
+            "power_factor": 0.0,
+            "frequency": 0.0,
             "temperature": 27.8,
-            "source": "Classroom II ECE B IoT Telemetry Node"
+            "last_seen": None,
+            "packet_count": 0
         }
+        
+        self.ece2b_sensor = self._get_current_ece2b_dict()
         
         self.is_running = False
         self.task = None
         self.current_state = self._generate_state()
+
+    def is_ece2b_connected(self) -> bool:
+        """Returns True if a real telemetry packet was received within the last 20 seconds."""
+        if not self.last_ece2b_packet_time:
+            return False
+        elapsed = (datetime.now() - self.last_ece2b_packet_time).total_seconds()
+        return elapsed <= 20
+
+    def set_real_sensor_mode(self, enable: bool):
+        """Toggle Real Hardware Sensor mode. If True and disconnected, values show 0."""
+        self.ece2b_real_mode = bool(enable)
+        self.ece2b_sensor = self._get_current_ece2b_dict()
+        self.current_state = self._generate_state()
+
+    def get_ece2b_status(self) -> dict:
+        """Returns current II ECE B status respecting real mode and connection status."""
+        return self._get_current_ece2b_dict()
+
+    def _get_current_ece2b_dict(self) -> dict:
+        is_conn = self.is_ece2b_connected()
+        if self.ece2b_real_mode:
+            if is_conn:
+                return {
+                    "connected": True,
+                    "real_mode": True,
+                    "last_seen": self.real_hardware_reading.get("last_seen"),
+                    "packet_count": self.real_hardware_reading.get("packet_count", 0),
+                    "voltage": self.real_hardware_reading["voltage"],
+                    "current": self.real_hardware_reading["current"],
+                    "power": self.real_hardware_reading["power"],
+                    "power_factor": self.real_hardware_reading["power_factor"],
+                    "frequency": self.real_hardware_reading["frequency"],
+                    "temperature": self.real_hardware_reading.get("temperature", 28.0),
+                    "source": "Physical Transducer (Live Telemetry Active)"
+                }
+            else:
+                return {
+                    "connected": False,
+                    "real_mode": True,
+                    "last_seen": self.real_hardware_reading.get("last_seen"),
+                    "packet_count": self.real_hardware_reading.get("packet_count", 0),
+                    "voltage": 0.0,
+                    "current": 0.0,
+                    "power": 0.0,
+                    "power_factor": 0.0,
+                    "frequency": 0.0,
+                    "temperature": 27.0,
+                    "source": "Physical Sensor Offline (0 V)"
+                }
+        else:
+            return {
+                "connected": True,
+                "real_mode": False,
+                "last_seen": self.real_hardware_reading.get("last_seen"),
+                "packet_count": self.real_hardware_reading.get("packet_count", 0),
+                "voltage": round(self.sim_ece2b_voltage, 1),
+                "current": round(self.sim_ece2b_current, 2),
+                "power": round(self.sim_ece2b_power, 3),
+                "power_factor": 0.95,
+                "frequency": 50.01,
+                "temperature": 27.8,
+                "source": "Classroom II ECE B Simulated Baseline"
+            }
 
     def set_twin_active_power(self, power_kw: float):
         """Syncs the simulator with current Digital Twin active loads."""
@@ -41,48 +112,63 @@ class LiveSimulator:
     def update_ece2b_sensor(self, data: dict):
         """
         Accepts real-time telemetry from the physical voltage and current sensor
-        attached to Classroom II ECE B (via Raspberry Pi / IoT edge gateway).
+        attached to Classroom II ECE B (via ESP32 / IoT edge node).
         """
-        v = float(data.get("voltage", 230.0))
-        c = float(data.get("current", 2.2))
-        pf = float(data.get("power_factor", 0.95))
-        f = float(data.get("frequency", 50.0))
+        v = float(data.get("voltage", 0.0))
+        # If current not provided in packet (e.g. voltage-only ZMPT101B node), estimate current if V > 10
+        if "current" in data and data["current"] is not None:
+            c = float(data["current"])
+        else:
+            c = 2.2 if v > 10 else 0.0
+            
+        pf = float(data.get("power_factor", 0.95 if v > 10 else 0.0))
+        f = float(data.get("frequency", 50.0 if v > 10 else 0.0))
         
-        # If power is not directly supplied, calculate P = (V * I * pf) / 1000 kW
         if "power" in data and data["power"] is not None:
             p = float(data["power"])
         else:
             p = round((v * c * pf) / 1000.0, 3)
             
-        self.ece2b_sensor["connected"] = True
-        self.ece2b_sensor["last_seen"] = datetime.now().isoformat()
-        self.ece2b_sensor["packet_count"] += 1
-        self.ece2b_sensor["voltage"] = round(v, 2)
-        self.ece2b_sensor["current"] = round(c, 3)
-        self.ece2b_sensor["power"] = round(p, 3)
-        self.ece2b_sensor["power_factor"] = round(pf, 2)
-        self.ece2b_sensor["frequency"] = round(f, 2)
-        self.ece2b_sensor["temperature"] = round(float(data.get("temperature", 28.0)), 1)
-        self.ece2b_sensor["source"] = "Physical Transducer (Live Telemetry Active)"
+        now_dt = datetime.now()
+        self.last_ece2b_packet_time = now_dt
+        self.real_hardware_reading = {
+            "voltage": round(v, 2),
+            "current": round(c, 3),
+            "power": round(p, 3),
+            "power_factor": round(pf, 2),
+            "frequency": round(f, 2),
+            "temperature": round(float(data.get("temperature", 28.0)), 1),
+            "last_seen": now_dt.isoformat(),
+            "packet_count": self.real_hardware_reading.get("packet_count", 0) + 1
+        }
+        self.ece2b_sensor = self._get_current_ece2b_dict()
         
-        # Also sync campus grid voltage feed
-        self.voltage = round(v, 2)
-        self.power_factor = round(pf, 2)
-        self.frequency = round(f, 2)
-        self.last_hardware_time = datetime.now()
-        self.current_state = self._generate_state()
+        # If in real mode and grid voltage feed is synced
+        if self.ece2b_real_mode and v > 10:
+            self.voltage = round(v, 2)
+            self.power_factor = round(pf, 2)
+            self.frequency = round(f, 2)
+            self.last_hardware_time = now_dt
+            self.current_state = self._generate_state()
 
     def simulate_ece2b_connection(self, enable: bool = True):
-        """Allows testing the transition from demo mode to live connected hardware."""
-        self.ece2b_sensor["connected"] = True
-        self.ece2b_sensor["last_seen"] = datetime.now().isoformat()
-        self.ece2b_sensor["packet_count"] += 1
-        self.ece2b_sensor["voltage"] = 231.8
-        self.ece2b_sensor["current"] = 3.12
-        self.ece2b_sensor["power"] = round((231.8 * 3.12 * 0.96) / 1000.0, 3)
-        self.ece2b_sensor["power_factor"] = 0.96
-        self.ece2b_sensor["frequency"] = 50.02
-        self.ece2b_sensor["source"] = "Physical Transducer (Live Telemetry Active)"
+        """Allows testing the transition between live connected hardware and disconnected 0 state."""
+        if enable:
+            now_dt = datetime.now()
+            self.last_ece2b_packet_time = now_dt
+            self.real_hardware_reading = {
+                "voltage": 231.8,
+                "current": 3.12,
+                "power": round((231.8 * 3.12 * 0.96) / 1000.0, 3),
+                "power_factor": 0.96,
+                "frequency": 50.02,
+                "temperature": 27.5,
+                "last_seen": now_dt.isoformat(),
+                "packet_count": self.real_hardware_reading.get("packet_count", 0) + 1
+            }
+        else:
+            self.last_ece2b_packet_time = None
+        self.ece2b_sensor = self._get_current_ece2b_dict()
 
     def update_from_hardware(self, data: dict):
         """Campus-wide edge gateway ingestion."""
@@ -115,10 +201,13 @@ class LiveSimulator:
             self.current = self.current * 0.8 + (random.uniform(15, 25)) * 0.2
             power_kw = (self.voltage * self.current * self.power_factor) / 1000.0
 
-        # Also update jitter for II ECE B
-        self.ece2b_sensor["voltage"] = round(self.ece2b_sensor["voltage"] + random.uniform(-0.2, 0.2), 1)
-        self.ece2b_sensor["current"] = round(max(0.1, self.ece2b_sensor["current"] + random.uniform(-0.04, 0.04)), 2)
-        self.ece2b_sensor["power"] = round((self.ece2b_sensor["voltage"] * self.ece2b_sensor["current"] * self.ece2b_sensor["power_factor"]) / 1000.0, 3)
+        # Update simulated baseline jitter only when NOT in real sensor mode
+        if not self.ece2b_real_mode:
+            self.sim_ece2b_voltage = round(self.sim_ece2b_voltage + random.uniform(-0.2, 0.2), 1)
+            self.sim_ece2b_current = round(max(0.1, self.sim_ece2b_current + random.uniform(-0.04, 0.04)), 2)
+            self.sim_ece2b_power = round((self.sim_ece2b_voltage * self.sim_ece2b_current * 0.95) / 1000.0, 3)
+            
+        self.ece2b_sensor = self._get_current_ece2b_dict()
         
         return {
             "timestamp": datetime.now().isoformat(),
@@ -157,14 +246,16 @@ class LiveSimulator:
         is_on = load.get("status") == "ON"
         
         if is_ece2b:
-            reading = self.ece2b_sensor
+            reading = self._get_current_ece2b_dict()
+            is_conn = reading["connected"]
             v = reading["voltage"] if is_on else 0.0
             c = reading["current"] if is_on else 0.0
             p = reading["power"] if is_on else 0.0
             return {
                 **load,
                 "is_sensor_rig": True,
-                "sensor_connected": reading["connected"],
+                "real_mode": reading.get("real_mode", False),
+                "sensor_connected": is_conn,
                 "voltage": v,
                 "current": c,
                 "power_kw": p,

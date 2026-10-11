@@ -66,6 +66,16 @@ export const simulateSensorConnection = async (enable: boolean) => {
   return response.data;
 };
 
+export const setClassroomRealMode = async (enable: boolean) => {
+  const response = await axios.post(`${API_URL}/classroom/II-ECE-B/real-mode`, { enable });
+  return response.data;
+};
+
+export const fetchClassroomStatus = async () => {
+  const response = await axios.get(`${API_URL}/classroom/II-ECE-B/status`);
+  return response.data;
+};
+
 export const restoreAllLoads = async () => {
   const response = await axios.post(`${API_URL}/loads/restore-all`);
   return response.data;

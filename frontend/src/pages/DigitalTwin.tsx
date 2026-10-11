@@ -9,7 +9,7 @@ import AeroBlueprintTwin from '../components/AeroBlueprintTwin';
 import LoadTelemetryModal from '../components/LoadTelemetryModal';
 import {
   fetchCurrentData, fetchPrediction, fetchLoads,
-  toggleLoad, shedSuggestedLoads
+  toggleLoad, shedSuggestedLoads, setClassroomRealMode
 } from '../services/api';
 
 export const DigitalTwin = () => {
@@ -20,6 +20,8 @@ export const DigitalTwin = () => {
   const [loading, setLoading] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [repredictNote, setRepredictNote] = useState<string | null>(null);
+  const [realMode, setRealMode] = useState(false);
+  const [realModeToggling, setRealModeToggling] = useState(false);
 
   const loadData = async () => {
     try {
@@ -280,40 +282,105 @@ export const DigitalTwin = () => {
 
         {/* II ECE B Live Status Callout Card */}
         <GlassCard style={{ padding: '22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Radio size={18} className="text-amber" />
-            <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>
-              Classroom II ECE B Transducer Node
-            </h4>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Radio size={18} className="text-amber" />
+              <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>
+                Classroom II ECE B Transducer Node
+              </h4>
+            </div>
+            {/* Real Sensor Mode Toggle */}
+            <button
+              id="ece2b-real-mode-toggle"
+              onClick={async () => {
+                setRealModeToggling(true);
+                try {
+                  const res = await setClassroomRealMode(!realMode);
+                  setRealMode(res.real_mode ?? !realMode);
+                  await loadData();
+                } catch {}
+                finally { setRealModeToggling(false); }
+              }}
+              disabled={realModeToggling}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '6px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                cursor: realModeToggling ? 'wait' : 'pointer', border: '1.5px solid',
+                transition: 'all 0.25s ease',
+                borderColor: realMode ? '#10b981' : 'rgba(255,255,255,0.12)',
+                background: realMode ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.04)',
+                color: realMode ? '#10b981' : 'var(--text-3)',
+              }}
+            >
+              <span style={{
+                width: 8, height: 8, borderRadius: '50%',
+                background: realMode ? '#10b981' : '#64748b',
+                boxShadow: realMode ? '0 0 6px #10b981' : 'none',
+                transition: 'all 0.25s ease'
+              }} />
+              {realModeToggling ? 'Switching...' : realMode ? 'Real Sensor ON' : 'Real Sensor OFF'}
+            </button>
           </div>
 
+          {/* Connection status banner */}
           <div style={{
-            padding: '12px 14px', borderRadius: 10,
-            background: 'rgba(16,185,129,0.1)',
-            border: '1px solid rgba(16,185,129,0.25)',
+            padding: '10px 14px', borderRadius: 10,
+            background: realMode
+              ? (sensorRig?.sensor_connected ?? sensorRig?.connected)
+                ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'
+              : 'rgba(99,102,241,0.1)',
+            border: `1px solid ${
+              realMode
+                ? (sensorRig?.sensor_connected ?? sensorRig?.connected)
+                  ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'
+                : 'rgba(99,102,241,0.25)'
+            }`,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span className="status-indicator-dot dot-connected" />
-                <span style={{ fontSize: 12.5, fontWeight: 700, color: '#10b981' }}>
-                  {sensorRig?.connected ? 'Physical Transducer Active' : 'Classroom Sensor Node Active'}
+                <span className={`status-indicator-dot ${
+                  realMode
+                    ? (sensorRig?.sensor_connected ?? sensorRig?.connected) ? 'dot-connected' : 'dot-error'
+                    : 'dot-active'
+                }`} />
+                <span style={{
+                  fontSize: 12.5, fontWeight: 700,
+                  color: realMode
+                    ? (sensorRig?.sensor_connected ?? sensorRig?.connected) ? '#10b981' : '#ef4444'
+                    : '#818cf8'
+                }}>
+                  {realMode
+                    ? (sensorRig?.sensor_connected ?? sensorRig?.connected)
+                      ? '⚡ Physical Sensor Connected — Live Values' : '⚠ Sensor Offline — Showing 0 V'
+                    : '🔵 Simulated Baseline Active'
+                  }
                 </span>
               </div>
               <span style={{ fontSize: 10.5, color: 'var(--text-3)', fontWeight: 600 }}>API AUTH OK</span>
             </div>
           </div>
 
+          {/* Voltage / Current readouts */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div style={{ padding: '10px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
               <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase' }}>Detected Voltage</div>
               <div style={{ fontSize: 16, fontWeight: 800, color: '#22d3ee', marginTop: 2 }}>
-                {(sensorRig?.voltage || 230.5).toFixed(1)} V
+                {realMode
+                  ? (sensorRig?.sensor_connected ?? sensorRig?.connected)
+                    ? (sensorRig?.voltage ?? 0).toFixed(1) : '0.0'
+                  : (sensorRig?.voltage ?? 230.5).toFixed(1)
+                } V
               </div>
             </div>
             <div style={{ padding: '10px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
               <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase' }}>Detected Current</div>
               <div style={{ fontSize: 16, fontWeight: 800, color: '#f59e0b', marginTop: 2 }}>
-                {(sensorRig?.current || 2.45).toFixed(2)} A
+                {realMode
+                  ? (sensorRig?.sensor_connected ?? sensorRig?.connected)
+                    ? (sensorRig?.current ?? 0).toFixed(2) : '0.00'
+                  : (sensorRig?.current ?? 2.45).toFixed(2)
+                } A
               </div>
             </div>
           </div>

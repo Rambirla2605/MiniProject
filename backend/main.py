@@ -138,14 +138,14 @@ def receive_sensor_data(payload: dict, x_api_key: str = Header(None)):
     is_authenticated = (key_received == ECE2B_API_KEY) or (key_received is None)
     
     live_simulator.update_ece2b_sensor(payload)
+    reading = live_simulator.get_ece2b_status()
     
     # Also update II ECE B load power in the digital twin registry
     if "LD-F3-ECE2B" in _load_state:
-        v = float(payload.get("voltage", 230.0))
-        c = float(payload.get("current", 2.2))
-        pf = float(payload.get("power_factor", 0.95))
-        calculated_kw = round((v * c * pf) / 1000.0, 3)
-        _load_state["LD-F3-ECE2B"]["power_kw"] = calculated_kw
+        if live_simulator.ece2b_real_mode:
+            _load_state["LD-F3-ECE2B"]["power_kw"] = reading["power"] if reading["connected"] else 0.0
+        else:
+            _load_state["LD-F3-ECE2B"]["power_kw"] = reading["power"]
         
         # Recalculate campus active load
         total_on = sum(l["power_kw"] for l in _load_state.values() if l["status"] == "ON")
@@ -158,7 +158,7 @@ def receive_sensor_data(payload: dict, x_api_key: str = Header(None)):
         "authenticated": is_authenticated,
         "api_key_valid": bool(key_received == ECE2B_API_KEY) if key_received else True,
         "timestamp": datetime.now().isoformat(),
-        "live_telemetry": live_simulator.ece2b_sensor,
+        "live_telemetry": reading,
         "twin_synced": True
     }
 
@@ -174,11 +174,55 @@ def toggle_simulate_sensor(payload: dict = None):
     if payload and "enable" in payload:
         enable = bool(payload["enable"])
     live_simulator.simulate_ece2b_connection(enable)
+    reading = live_simulator.get_ece2b_status()
+    if "LD-F3-ECE2B" in _load_state:
+        if live_simulator.ece2b_real_mode:
+            _load_state["LD-F3-ECE2B"]["power_kw"] = reading["power"] if reading["connected"] else 0.0
+        total_on = sum(l["power_kw"] for l in _load_state.values() if l["status"] == "ON")
+        live_simulator.set_twin_active_power(total_on)
     return {
         "status": "UPDATED",
-        "sensor_connected": live_simulator.ece2b_sensor["connected"],
-        "source": live_simulator.ece2b_sensor["source"],
-        "telemetry": live_simulator.ece2b_sensor
+        "real_mode": live_simulator.ece2b_real_mode,
+        "sensor_connected": reading["connected"],
+        "source": reading["source"],
+        "telemetry": reading
+    }
+
+@app.post("/api/classroom/II-ECE-B/real-mode")
+def set_classroom_real_mode(payload: dict = None):
+    """
+    Toggle Real Sensor Mode for Classroom II ECE B.
+    When enabled: shows real value from sensor if connected, or 0 if not connected.
+    When disabled: shows simulated digital twin baseline.
+    """
+    enable = True
+    if payload and "enable" in payload:
+        enable = bool(payload["enable"])
+    live_simulator.set_real_sensor_mode(enable)
+    reading = live_simulator.get_ece2b_status()
+    if "LD-F3-ECE2B" in _load_state:
+        if enable:
+            _load_state["LD-F3-ECE2B"]["power_kw"] = reading["power"] if reading["connected"] else 0.0
+        else:
+            _load_state["LD-F3-ECE2B"]["power_kw"] = 2.2
+        total_on = sum(l["power_kw"] for l in _load_state.values() if l["status"] == "ON")
+        live_simulator.set_twin_active_power(total_on)
+    return {
+        "status": "UPDATED",
+        "real_mode": live_simulator.ece2b_real_mode,
+        "sensor_connected": reading["connected"],
+        "source": reading["source"],
+        "telemetry": reading
+    }
+
+@app.get("/api/classroom/II-ECE-B/status")
+def get_classroom_status():
+    reading = live_simulator.get_ece2b_status()
+    return {
+        "real_mode": live_simulator.ece2b_real_mode,
+        "sensor_connected": reading["connected"],
+        "source": reading["source"],
+        "telemetry": reading
     }
 
 @app.get("/api/current-data")
